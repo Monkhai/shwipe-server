@@ -8,8 +8,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-
-	"github.com/Monkhai/shwipe-server.git/secrets"
 )
 
 type RestaurantAPI struct {
@@ -56,7 +54,7 @@ func (r *RestaurantAPI) GetResaturants(lat, lng string, nextPageTokenPtr *string
 
 	queryString := query.Encode()
 
-	requestUrl := fmt.Sprintf("%s?%s", secrets.BASE_URL, queryString)
+	requestUrl := fmt.Sprintf("%s?%s", r.baseURL, queryString)
 
 	response, err := http.Get(requestUrl)
 	if err != nil {

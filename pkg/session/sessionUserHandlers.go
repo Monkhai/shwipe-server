@@ -1,37 +1,25 @@
 package session
 
 import (
-	"errors"
-
 	"github.com/Monkhai/shwipe-server.git/pkg/user"
 )
 
 func (s *Session) GetUser(userId string) (*user.User, bool) {
-	s.mux.RLock()
-	defer s.mux.RUnlock()
-
-	usr, ok := s.UsersMap[userId]
-	if !ok {
-		return &user.User{}, false
-	}
-
-	return usr, true
+	return s.UsersMap.GetUser(userId)
 }
 
 func (s *Session) AddUser(usr *user.User) error {
-	if s.IsUserInSession(usr.ID) {
-		return errors.New("user already in session")
+	err := s.UsersMap.AddUser(usr)
+	if err != nil {
+		return err
 	}
-	s.UsersMap[usr.ID] = usr
 
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
 		select {
 		case <-s.ctx.Done():
-			{
-				return
-			}
+			return
 		case msg := <-usr.MsgChan:
 			{
 				s.msgChan <- msg

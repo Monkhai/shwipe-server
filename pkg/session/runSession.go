@@ -2,22 +2,105 @@ package session
 
 import (
 	"log"
+	"sync"
 
-	"github.com/Monkhai/shwipe-server.git/pkg/protocol"
+	clientmessages "github.com/Monkhai/shwipe-server.git/pkg/protocol/clientMessages"
+	servermessages "github.com/Monkhai/shwipe-server.git/pkg/protocol/serverMessages"
 )
 
-func (s *Session) RunSession() {
-	usersIndexMap := make(map[string]int)
+const FETCH_THRESHOLD = 2
+const BATCH_SIZE = 20
+
+func (s *Session) RunSession(wg *sync.WaitGroup) {
+	defer wg.Done()
 	restaurants, nextPageToken, err := s.restaurantAPI.GetResaturants(s.Location.Lat, s.Location.Lng, nil)
 	if err != nil {
 		log.Printf("Error getting restaurants: %v", err)
 		return
 	}
 
-	for _, usr := range s.UsersMap {
-		msg := protocol.NewRestaurantListMessage(restaurants)
-		usr.WriteMessage(protocol.IndexUpdateMessage{
-			Index: 0,
+	safeUsers := make([]servermessages.SAFE_SessionUser, 0, len(s.UsersMap.UsersMap))
+	for _, usr := range s.UsersMap.UsersMap {
+		safeUsers = append(safeUsers, servermessages.SAFE_SessionUser{
+			PhotoURL: usr.FirebaseUserRecord.PhotoURL,
+			UserName: usr.FirebaseUserRecord.DisplayName,
 		})
+	}
+	msg := servermessages.NewSessionStartMessage(s.ID, safeUsers, restaurants)
+	for _, usr := range s.UsersMap.UsersMap {
+		usr.WriteMessage(msg)
+	}
+
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		case msg := <-s.msgChan:
+			{
+				switch msg := msg.(type) {
+				case clientmessages.BaseClientMessage:
+				case clientmessages.JoinSessionMessage:
+				case clientmessages.CreateSessionMessage:
+				case clientmessages.StartSessionMessage:
+					{
+						log.Printf("Start session message received: %v", msg)
+						continue
+					}
+				case clientmessages.UpdateLocationMessage:
+					{
+						s.handleUpdateLocationMessage(msg)
+					}
+				case clientmessages.IndexUpdateMessage:
+					{
+						{
+							usr, ok := s.GetUser(msg.TokenID)
+							if !ok {
+								log.Printf("User not found: %v", msg.TokenID)
+								return
+							}
+
+							if (msg.Index+FETCH_THRESHOLD)%BATCH_SIZE != 0 {
+								err := s.UsersMap.SetIndex(usr.IDToken, msg.Index)
+								if err != nil {
+									log.Printf("Error setting index: %v", err)
+								}
+								continue
+							}
+
+							left := len(restaurants) - msg.Index
+							if left <= FETCH_THRESHOLD {
+								// fetch 20 more
+								newRestaurants, newNextPageToken, err := s.restaurantAPI.GetResaturants(s.Location.Lat, s.Location.Lng, nextPageToken)
+								if err != nil {
+									log.Printf("Error getting restaurants: %v", err)
+									return
+								}
+
+								updateRestaurantsMsg := servermessages.NewRestaurantListMessage(newRestaurants)
+								usr.WriteMessage(updateRestaurantsMsg)
+
+								restaurants = append(restaurants, newRestaurants...)
+								nextPageToken = newNextPageToken
+							} else {
+								nextBatchIndex := msg.Index + FETCH_THRESHOLD
+								nextBatch := restaurants[nextBatchIndex : nextBatchIndex+BATCH_SIZE]
+								updateRestaurantsMsg := servermessages.NewRestaurantListMessage(nextBatch)
+								usr.WriteMessage(updateRestaurantsMsg)
+							}
+							err := s.UsersMap.SetIndex(usr.IDToken, msg.Index)
+							if err != nil {
+								log.Printf("Error setting index: %v", err)
+							}
+
+						}
+					}
+				default:
+					{
+						log.Printf("Unknown message type: %v", msg)
+						continue
+					}
+				}
+			}
+		}
 	}
 }

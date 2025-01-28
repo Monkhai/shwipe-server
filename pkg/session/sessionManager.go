@@ -1,10 +1,12 @@
 package session
 
 import (
+	"context"
 	"errors"
 	"sync"
 
 	"github.com/Monkhai/shwipe-server.git/pkg/user"
+	"github.com/google/uuid"
 )
 
 type SessionManager struct {
@@ -71,7 +73,15 @@ func (sm *SessionManager) IsSessionIn(session *Session) bool {
 	return ok
 }
 
-func (sm *SessionManager) AddSession(session *Session) error {
+func (sm *SessionManager) CreateSession(usr *user.User, wg *sync.WaitGroup, ctx context.Context) *Session {
+	sessionID := createSessionID()
+	_, cancel := context.WithCancel(ctx)
+	session := NewSession(sessionID, usr.Location, ctx, cancel, wg)
+	sm.addSession(session)
+	return session
+}
+
+func (sm *SessionManager) addSession(session *Session) error {
 	if sm.IsSessionIn(session) {
 		return errors.New("session already in")
 	}
@@ -79,4 +89,8 @@ func (sm *SessionManager) AddSession(session *Session) error {
 	defer sm.mux.Unlock()
 	sm.Sessions[session.ID] = session
 	return nil
+}
+
+func createSessionID() string {
+	return uuid.New().String()
 }

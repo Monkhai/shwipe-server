@@ -6,13 +6,14 @@ import (
 
 	"github.com/Monkhai/shwipe-server.git/pkg/protocol"
 	"github.com/Monkhai/shwipe-server.git/pkg/restaurant"
-	"github.com/Monkhai/shwipe-server.git/pkg/user"
+	"github.com/Monkhai/shwipe-server.git/secrets"
 )
 
 type Session struct {
 	ID            string
-	UsersMap      map[string]*user.User
+	UsersMap      *SessionUsersMap
 	Location      protocol.Location
+	Restaurants   []restaurant.Restaurant
 	wg            *sync.WaitGroup
 	mux           *sync.RWMutex
 	ctx           context.Context
@@ -25,11 +26,12 @@ func NewSession(id string, location protocol.Location, ctx context.Context, canc
 	return &Session{
 		ID:            id,
 		Location:      location,
+		Restaurants:   []restaurant.Restaurant{},
 		ctx:           ctx,
 		cancel:        cancelCtx,
 		mux:           &sync.RWMutex{},
-		UsersMap:      make(map[string]*user.User),
-		restaurantAPI: restaurant.NewRestaurantAPI(restaurant.BASE_URL, restaurant.GOOGLE_PLACES_API_KEY),
+		UsersMap:      NewSessionUsersMap(),
+		restaurantAPI: restaurant.NewRestaurantAPI(secrets.BASE_URL, secrets.GOOGLE_PLACES_API_KEY),
 		msgChan:       make(chan interface{}),
 		wg:            wg,
 	}

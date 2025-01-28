@@ -30,7 +30,7 @@ func (um *UserManager) GetUser(id string) (*User, error) {
 func (um *UserManager) IsUserIn(user *User) bool {
 	um.mux.RLock()
 	defer um.mux.RUnlock()
-	_, ok := um.usersMap[user.ID]
+	_, ok := um.usersMap[user.IDToken]
 	return ok
 }
 
@@ -40,6 +40,6 @@ func (um *UserManager) AddUser(user *User) error {
 	}
 	um.mux.Lock()
 	defer um.mux.Unlock()
-	um.usersMap[user.ID] = user
+	um.usersMap[user.IDToken] = user
 	return nil
 }

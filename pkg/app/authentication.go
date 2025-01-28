@@ -1,9 +1,21 @@
 package app
 
-func (app *App) AuthenticateUser(token string) (bool, error) {
-	_, err := app.auth.VerifyIDToken(app.ctx, token)
+import auth "firebase.google.com/go/auth"
+
+func (app *App) AuthenticateUser(token string) (string, error) {
+	user, err := app.auth.VerifyIDToken(app.ctx, token)
 	if err != nil {
-		return false, err
+		return "", err
 	}
-	return true, nil
+
+	return user.UID, nil
+}
+
+func (app *App) GetUserRecord(id string) (*auth.UserRecord, error) {
+	usr, err := app.auth.GetUser(app.ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return usr, nil
 }

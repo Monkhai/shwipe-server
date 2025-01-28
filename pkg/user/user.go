@@ -6,22 +6,25 @@ import (
 	"log"
 	"sync"
 
+	"firebase.google.com/go/auth"
 	"github.com/Monkhai/shwipe-server.git/pkg/protocol"
+	clientmessages "github.com/Monkhai/shwipe-server.git/pkg/protocol/clientMessages"
 	"github.com/gorilla/websocket"
 )
 
 type User struct {
-	ID        string
-	IDToken   string
-	Conn      *websocket.Conn
-	ctx       context.Context
-	cancelCtx context.CancelFunc
-	MsgChan   chan interface{}
+	IDToken            string
+	Conn               *websocket.Conn
+	FirebaseUserRecord *auth.UserRecord
+	Ctx                context.Context
+	cancelCtx          context.CancelFunc
+	MsgChan            chan interface{}
+	Location           protocol.Location
 }
 
-func NewUser(id string, idToken string, conn *websocket.Conn, ctx context.Context) *User {
+func NewUser(userRecord *auth.UserRecord, idToken string, conn *websocket.Conn, ctx context.Context, location protocol.Location) *User {
 	ctx, cancel := context.WithCancel(ctx)
-	return &User{ID: id, IDToken: idToken, Conn: conn, ctx: ctx, cancelCtx: cancel}
+	return &User{FirebaseUserRecord: userRecord, IDToken: idToken, Conn: conn, Ctx: ctx, cancelCtx: cancel, Location: location}
 }
 
 func (u *User) Listen(wg *sync.WaitGroup) {
@@ -46,23 +49,23 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 
 	for {
 		select {
-		case <-u.ctx.Done():
+		case <-u.Ctx.Done():
 			{
 				u.cancelCtx()
 				return
 			}
 		case msg := <-messageChan:
 			{
-				var baseMsg protocol.BaseClientMessage
+				var baseMsg clientmessages.BaseClientMessage
 				if err := json.Unmarshal(msg, &baseMsg); err != nil {
 					log.Printf("Error unmarshalling message: %v", err)
 					continue
 				}
 
 				switch baseMsg.Type {
-				case protocol.INDEX_UPDATE_MESSAGE_TYPE:
+				case clientmessages.INDEX_UPDATE_MESSAGE_TYPE:
 					{
-						var indexUpdateMessage protocol.IndexUpdateMessage
+						var indexUpdateMessage clientmessages.IndexUpdateMessage
 						if err := json.Unmarshal(msg, &indexUpdateMessage); err != nil {
 							log.Printf("Error unmarshalling index update message: %v", err)
 							continue
@@ -80,9 +83,9 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 						websocket.CloseGoingAway,
 						websocket.CloseAbnormalClosure,
 						websocket.CloseNoStatusReceived) {
-						log.Printf("Player %s disconnected gracefully\n", u.ID)
+						log.Printf("Player %s disconnected gracefully\n", u.FirebaseUserRecord.UID)
 					} else {
-						log.Printf("Unexpected error reading from player %s: %v\n", u.ID, err)
+						log.Printf("Unexpected error reading from player %s: %v\n", u.FirebaseUserRecord.UID, err)
 					}
 				}
 				u.cancelCtx()
