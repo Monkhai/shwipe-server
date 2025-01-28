@@ -1,0 +1,17 @@
+runtime: go123 # Using Go 1.23.2 runtime
+service: default
+
+handlers:
+  - url: /.*
+    script: auto
+
+main: cmd/server/main.go
+
+env_variables:
+  GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT} # This will be replaced with your project ID
+
+instance_class: F1 # Free tier instance class
+automatic_scaling:
+  target_cpu_utilization: 0.65
+  min_instances: 1
+  max_instances: 10
