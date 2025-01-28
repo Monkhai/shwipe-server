@@ -43,3 +43,10 @@ func (um *UserManager) AddUser(user *User) error {
 	um.usersMap[user.IDToken] = user
 	return nil
 }
+
+func (um *UserManager) RemoveUser(userID string) error {
+	um.mux.Lock()
+	defer um.mux.Unlock()
+	delete(um.usersMap, userID)
+	return nil
+}

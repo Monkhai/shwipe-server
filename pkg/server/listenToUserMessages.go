@@ -14,13 +14,21 @@ func (s *Server) listenToUserMessages(usr *user.User, wg *sync.WaitGroup) {
 
 	for {
 		select {
-		case <-usr.Ctx.Done():
+		case <-s.ctx.Done():
 			{
-				log.Printf("User context done")
+				log.Println("Server context done")
 				return
 			}
-		case msg := <-usr.MsgChan:
+		case <-usr.Ctx.Done():
 			{
+				log.Printf("User context done (from server)")
+				s.UserManager.RemoveUser(usr.IDToken)
+				s.SessionManager.RemoveUserFromAllSessions(usr.IDToken)
+				return
+			}
+		case msg := <-usr.ServerMsgChan:
+			{
+				log.Printf("Message received from user: %T", msg)
 				switch m := msg.(type) {
 				/*
 					these are the messages that are not related to sessions
@@ -33,19 +41,40 @@ func (s *Server) listenToUserMessages(usr *user.User, wg *sync.WaitGroup) {
 					}
 				case clientmessages.CreateSessionMessage:
 					{
-						session := s.SessionManager.CreateSession(usr, s.wg, usr.Ctx)
-						msg := servermessages.NewSessionCreatedMessage(session.ID)
+						session, err := s.SessionManager.CreateSession(usr, s.wg, s.ctx)
+						if err != nil {
+							log.Printf("Error creating session: %v", err)
+							continue
+						}
+						log.Println("Session created")
+						usrs, err := session.UsersMap.GetAllUsers()
+						if err != nil {
+							log.Printf("Error getting users: %v", err)
+							continue
+						}
+						var safeUsers []servermessages.SAFE_SessionUser
+						for _, usr := range usrs {
+							safeUsers = append(safeUsers, servermessages.SAFE_SessionUser{
+								PhotoURL: usr.FirebaseUserRecord.PhotoURL,
+								UserName: usr.FirebaseUserRecord.DisplayName,
+							})
+						}
+						msg := servermessages.NewSessionCreatedMessage(session.ID, safeUsers)
 						usr.WriteMessage(msg)
+						log.Println("Session created message sent")
 					}
 				case clientmessages.StartSessionMessage:
 					{
+						log.Println("Start session message received")
 						session, err := s.SessionManager.GetSession(m.SessionId)
 						if err != nil {
 							log.Printf("Session not found: %v", m.SessionId)
 							continue
 						}
+						log.Println("Session found")
 						s.wg.Add(1)
 						go session.RunSession(s.wg)
+						log.Println("Session started")
 					}
 				case clientmessages.JoinSessionMessage:
 					{
@@ -63,7 +92,7 @@ func (s *Server) listenToUserMessages(usr *user.User, wg *sync.WaitGroup) {
 					}
 				default:
 					{
-						log.Printf("Unknown message type: %v", m)
+						log.Printf("Unhandled message type received: %T with content: %+v", m, m)
 					}
 				}
 			}

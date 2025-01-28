@@ -18,19 +18,29 @@ type User struct {
 	FirebaseUserRecord *auth.UserRecord
 	Ctx                context.Context
 	cancelCtx          context.CancelFunc
-	MsgChan            chan interface{}
+	ServerMsgChan      chan interface{}
+	SessionMsgChan     chan interface{}
 	Location           protocol.Location
 }
 
 func NewUser(userRecord *auth.UserRecord, idToken string, conn *websocket.Conn, ctx context.Context, location protocol.Location) *User {
 	ctx, cancel := context.WithCancel(ctx)
-	return &User{FirebaseUserRecord: userRecord, IDToken: idToken, Conn: conn, Ctx: ctx, cancelCtx: cancel, Location: location}
+	return &User{
+		FirebaseUserRecord: userRecord,
+		IDToken:            idToken,
+		Conn:               conn,
+		Ctx:                ctx,
+		cancelCtx:          cancel,
+		Location:           location,
+		ServerMsgChan:      make(chan interface{}),
+		SessionMsgChan:     make(chan interface{}),
+	}
 }
 
 func (u *User) Listen(wg *sync.WaitGroup) {
 	defer func() {
 		wg.Done()
-		close(u.MsgChan)
+		close(u.ServerMsgChan)
 	}()
 
 	messageChan := make(chan []byte)
@@ -49,11 +59,6 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 
 	for {
 		select {
-		case <-u.Ctx.Done():
-			{
-				u.cancelCtx()
-				return
-			}
 		case msg := <-messageChan:
 			{
 				var baseMsg clientmessages.BaseClientMessage
@@ -61,6 +66,8 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 					log.Printf("Error unmarshalling message: %v", err)
 					continue
 				}
+
+				log.Printf("Received message: %v", baseMsg.Type)
 
 				switch baseMsg.Type {
 				case clientmessages.INDEX_UPDATE_MESSAGE_TYPE:
@@ -70,7 +77,48 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 							log.Printf("Error unmarshalling index update message: %v", err)
 							continue
 						}
-						u.MsgChan <- indexUpdateMessage
+						u.SessionMsgChan <- indexUpdateMessage
+						log.Println("Index update message sent")
+					}
+				case clientmessages.CREATE_SESSION_MESSAGE_TYPE:
+					{
+						var createSessionMessage clientmessages.CreateSessionMessage
+						if err := json.Unmarshal(msg, &createSessionMessage); err != nil {
+							log.Printf("Error unmarshalling create session message: %v", err)
+							continue
+						}
+						u.ServerMsgChan <- createSessionMessage
+						log.Println("Create session message sent")
+					}
+				case clientmessages.START_SESSION_MESSAGE_TYPE:
+					{
+						var startSessionMessage clientmessages.StartSessionMessage
+						if err := json.Unmarshal(msg, &startSessionMessage); err != nil {
+							log.Printf("Error unmarshalling create session message: %v", err)
+							continue
+						}
+						u.ServerMsgChan <- startSessionMessage
+						log.Println("Start session message sent")
+					}
+				case clientmessages.UPDATE_LOCATION_MESSAGE_TYPE:
+					{
+						var updateLocationMessage clientmessages.UpdateLocationMessage
+						if err := json.Unmarshal(msg, &updateLocationMessage); err != nil {
+							log.Printf("Error unmarshalling update location message: %v", err)
+							continue
+						}
+						u.SessionMsgChan <- updateLocationMessage
+						log.Println("Update location message sent")
+					}
+				case clientmessages.JOIN_SESSION_MESSAGE_TYPE:
+					{
+						var joinSessionMessage clientmessages.JoinSessionMessage
+						if err := json.Unmarshal(msg, &joinSessionMessage); err != nil {
+							log.Printf("Error unmarshalling join session message: %v", err)
+							continue
+						}
+						u.ServerMsgChan <- joinSessionMessage
+						log.Println("Join session message sent")
 					}
 				}
 			}
@@ -89,6 +137,11 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 					}
 				}
 				u.cancelCtx()
+				return
+			}
+		case <-u.Ctx.Done():
+			{
+				log.Println("User context done (from user)")
 				return
 			}
 		}

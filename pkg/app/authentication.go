@@ -1,11 +1,15 @@
 package app
 
-import auth "firebase.google.com/go/auth"
+import (
+	"errors"
+
+	auth "firebase.google.com/go/auth"
+)
 
 func (app *App) AuthenticateUser(token string) (string, error) {
 	user, err := app.auth.VerifyIDToken(app.ctx, token)
 	if err != nil {
-		return "", err
+		return "", errors.New("failed to verify id token")
 	}
 
 	return user.UID, nil

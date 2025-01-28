@@ -12,12 +12,15 @@ const FETCH_THRESHOLD = 2
 const BATCH_SIZE = 20
 
 func (s *Session) RunSession(wg *sync.WaitGroup) {
+	log.Println("Running session")
 	defer wg.Done()
+	log.Println("Getting restaurants")
 	restaurants, nextPageToken, err := s.restaurantAPI.GetResaturants(s.Location.Lat, s.Location.Lng, nil)
 	if err != nil {
 		log.Printf("Error getting restaurants: %v", err)
 		return
 	}
+	log.Println("Got restaurants")
 
 	safeUsers := make([]servermessages.SAFE_SessionUser, 0, len(s.UsersMap.UsersMap))
 	for _, usr := range s.UsersMap.UsersMap {
@@ -34,7 +37,10 @@ func (s *Session) RunSession(wg *sync.WaitGroup) {
 	for {
 		select {
 		case <-s.ctx.Done():
-			return
+			{
+				log.Println("Session context cancelled")
+				return
+			}
 		case msg := <-s.msgChan:
 			{
 				switch msg := msg.(type) {
@@ -43,7 +49,7 @@ func (s *Session) RunSession(wg *sync.WaitGroup) {
 				case clientmessages.CreateSessionMessage:
 				case clientmessages.StartSessionMessage:
 					{
-						log.Printf("Start session message received: %v", msg)
+						log.Printf("Unrelated message received: %v", msg)
 						continue
 					}
 				case clientmessages.UpdateLocationMessage:

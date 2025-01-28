@@ -1,6 +1,6 @@
 package protocol
 
 type Location struct {
-	Lat string
-	Lng string
+	Lat string `json:"lat"`
+	Lng string `json:"lng"`
 }

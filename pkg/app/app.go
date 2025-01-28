@@ -7,6 +7,7 @@ import (
 	firestore "cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
 	auth "firebase.google.com/go/auth"
+	"google.golang.org/api/option"
 )
 
 type App struct {
@@ -17,7 +18,9 @@ type App struct {
 }
 
 func NewApp(ctx context.Context) (*App, error) {
-	app, err := firebase.NewApp(ctx, nil)
+	// the file is in the root directory
+	opt := option.WithCredentialsFile("serviceAccountKey.json")
+	app, err := firebase.NewApp(ctx, nil, opt)
 	if err != nil {
 		return nil, fmt.Errorf("error initializing app: %v", err)
 	}

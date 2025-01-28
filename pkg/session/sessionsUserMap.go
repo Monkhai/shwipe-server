@@ -15,6 +15,7 @@ type SessionUsersMap struct {
 
 func NewSessionUsersMap() *SessionUsersMap {
 	userIndexMap := SessionUsersMap{
+		UsersMap: make(map[string]*user.User),
 		IndexMap: make(map[string]int),
 		mux:      sync.RWMutex{},
 	}
@@ -28,6 +29,8 @@ func (u *SessionUsersMap) AddUser(usr *user.User) error {
 	if u.IsUserInMap(usr.IDToken) {
 		return errors.New("user already in map")
 	}
+
+	//TODO: update all users with new user
 
 	u.mux.Lock()
 	defer u.mux.Unlock()
@@ -81,5 +84,22 @@ func (u *SessionUsersMap) SetIndex(userID string, index int) error {
 	u.mux.Lock()
 	defer u.mux.Unlock()
 	u.IndexMap[userID] = index
+	return nil
+}
+
+func (u *SessionUsersMap) GetUserCount() int {
+	u.mux.RLock()
+	defer u.mux.RUnlock()
+	return len(u.UsersMap)
+}
+
+func (u *SessionUsersMap) RemoveUser(userID string) error {
+	if !u.IsUserInMap(userID) {
+		return errors.New("user not found")
+	}
+	u.mux.Lock()
+	defer u.mux.Unlock()
+	delete(u.UsersMap, userID)
+	delete(u.IndexMap, userID)
 	return nil
 }

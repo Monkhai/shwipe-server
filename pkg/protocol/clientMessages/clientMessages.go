@@ -5,10 +5,9 @@ import "github.com/Monkhai/shwipe-server.git/pkg/protocol"
 const (
 	INDEX_UPDATE_MESSAGE_TYPE    = "index_update"
 	UPDATE_LOCATION_MESSAGE_TYPE = "update_location"
-
-	START_SESSION_MESSAGE_TYPE  = "start_session"
-	CREATE_SESSION_MESSAGE_TYPE = "create_session"
-	JOIN_SESSION_MESSAGE_TYPE   = "join_session"
+	START_SESSION_MESSAGE_TYPE   = "start_session"
+	CREATE_SESSION_MESSAGE_TYPE  = "create_session"
+	JOIN_SESSION_MESSAGE_TYPE    = "join_session"
 )
 
 type BaseClientMessage struct {

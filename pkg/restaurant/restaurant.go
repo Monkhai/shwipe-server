@@ -3,10 +3,10 @@ package restaurant
 import "fmt"
 
 type Restaurant struct {
-	Name       string
-	Rating     float64
-	PriceLevel int
-	Photos     []string
+	Name       string   `json:"name"`
+	Rating     float64  `json:"rating"`
+	PriceLevel int      `json:"price_level"`
+	Photos     []string `json:"photos"`
 }
 
 func GetRestaurantPhotoURL(photoReference string) string {

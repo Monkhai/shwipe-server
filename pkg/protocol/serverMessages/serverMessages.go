@@ -39,13 +39,15 @@ func NewSessionStartMessage(sessionId string, users []SAFE_SessionUser, restaura
 
 type SessionCreatedMessage struct {
 	BaseServerMessage
-	SessionId string `json:"session_id"`
+	SessionId string             `json:"session_id"`
+	Users     []SAFE_SessionUser `json:"users"`
 }
 
-func NewSessionCreatedMessage(sessionId string) SessionCreatedMessage {
+func NewSessionCreatedMessage(sessionId string, users []SAFE_SessionUser) SessionCreatedMessage {
 	return SessionCreatedMessage{
 		BaseServerMessage: BaseServerMessage{Type: SESSION_CREATED_MESSAGE_TYPE},
 		SessionId:         sessionId,
+		Users:             users,
 	}
 }
 
