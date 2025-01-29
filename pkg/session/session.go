@@ -30,7 +30,7 @@ func NewSession(id string, location protocol.Location, ctx context.Context, canc
 		ctx:           ctx,
 		cancel:        cancelCtx,
 		mux:           &sync.RWMutex{},
-		UsersMap:      NewSessionUsersMap(),
+		UsersMap:      NewSessionUsersMap(id),
 		restaurantAPI: restaurant.NewRestaurantAPI(secrets.BASE_URL, secrets.GOOGLE_PLACES_API_KEY),
 		msgChan:       make(chan interface{}),
 		wg:            wg,

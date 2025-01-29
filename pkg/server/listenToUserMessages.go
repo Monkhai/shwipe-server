@@ -84,11 +84,28 @@ func (s *Server) listenToUserMessages(usr *user.User, wg *sync.WaitGroup) {
 							log.Printf("Session not found: %v", m.SessionId)
 							continue
 						}
+						log.Println("found session")
 						err = session.AddUser(usr)
 						if err != nil {
 							log.Printf("Error adding user to session: %v", err)
 							continue
 						}
+						log.Println("user added")
+
+						usrs, err := session.UsersMap.GetAllUsers()
+						if err != nil {
+							log.Printf("Error getting users: %v", err)
+							continue
+						}
+						var safeUsers []servermessages.SAFE_SessionUser
+						for _, usr := range usrs {
+							safeUsers = append(safeUsers, servermessages.SAFE_SessionUser{
+								PhotoURL: usr.FirebaseUserRecord.PhotoURL,
+								UserName: usr.FirebaseUserRecord.DisplayName,
+							})
+						}
+						usr.WriteMessage(servermessages.NewJointSessionMessage(session.ID, session.Restaurants, safeUsers))
+						log.Println("joint session message sent")
 					}
 				default:
 					{

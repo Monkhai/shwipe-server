@@ -70,7 +70,7 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 				log.Printf("Received message: %v", baseMsg.Type)
 
 				switch baseMsg.Type {
-				case clientmessages.INDEX_UPDATE_MESSAGE_TYPE:
+				case clientmessages.UPDATE_INDEX_MESSAGE_TYPE:
 					{
 						var indexUpdateMessage clientmessages.IndexUpdateMessage
 						if err := json.Unmarshal(msg, &indexUpdateMessage); err != nil {

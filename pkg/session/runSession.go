@@ -75,14 +75,13 @@ func (s *Session) RunSession(wg *sync.WaitGroup) {
 
 							left := len(restaurants) - msg.Index
 							if left <= FETCH_THRESHOLD {
-								// fetch 20 more
 								newRestaurants, newNextPageToken, err := s.restaurantAPI.GetResaturants(s.Location.Lat, s.Location.Lng, nextPageToken)
 								if err != nil {
 									log.Printf("Error getting restaurants: %v", err)
 									return
 								}
 
-								updateRestaurantsMsg := servermessages.NewRestaurantListMessage(newRestaurants)
+								updateRestaurantsMsg := servermessages.NewRestaurantUpdateMessage(newRestaurants)
 								usr.WriteMessage(updateRestaurantsMsg)
 
 								restaurants = append(restaurants, newRestaurants...)
@@ -90,7 +89,7 @@ func (s *Session) RunSession(wg *sync.WaitGroup) {
 							} else {
 								nextBatchIndex := msg.Index + FETCH_THRESHOLD
 								nextBatch := restaurants[nextBatchIndex : nextBatchIndex+BATCH_SIZE]
-								updateRestaurantsMsg := servermessages.NewRestaurantListMessage(nextBatch)
+								updateRestaurantsMsg := servermessages.NewRestaurantUpdateMessage(nextBatch)
 								usr.WriteMessage(updateRestaurantsMsg)
 							}
 							err := s.UsersMap.SetIndex(usr.IDToken, msg.Index)

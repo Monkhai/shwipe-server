@@ -4,20 +4,23 @@ import (
 	"errors"
 	"sync"
 
+	servermessages "github.com/Monkhai/shwipe-server.git/pkg/protocol/serverMessages"
 	"github.com/Monkhai/shwipe-server.git/pkg/user"
 )
 
 type SessionUsersMap struct {
-	IndexMap map[string]int
-	UsersMap map[string]*user.User
-	mux      sync.RWMutex
+	sessionID string
+	IndexMap  map[string]int
+	UsersMap  map[string]*user.User
+	mux       sync.RWMutex
 }
 
-func NewSessionUsersMap() *SessionUsersMap {
+func NewSessionUsersMap(sessionID string) *SessionUsersMap {
 	userIndexMap := SessionUsersMap{
-		UsersMap: make(map[string]*user.User),
-		IndexMap: make(map[string]int),
-		mux:      sync.RWMutex{},
+		sessionID: sessionID,
+		UsersMap:  make(map[string]*user.User),
+		IndexMap:  make(map[string]int),
+		mux:       sync.RWMutex{},
 	}
 	for userID := range userIndexMap.IndexMap {
 		userIndexMap.IndexMap[userID] = 0
@@ -30,7 +33,16 @@ func (u *SessionUsersMap) AddUser(usr *user.User) error {
 		return errors.New("user already in map")
 	}
 
-	//TODO: update all users with new user
+	usrs, err := u.GetAllUsers()
+	if err != nil {
+		return err
+	}
+	for _, usr := range usrs {
+		usr.WriteMessage(servermessages.NewUserJoinedSessionMessage(u.sessionID, servermessages.SAFE_SessionUser{
+			PhotoURL: usr.FirebaseUserRecord.PhotoURL,
+			UserName: usr.FirebaseUserRecord.DisplayName,
+		}))
+	}
 
 	u.mux.Lock()
 	defer u.mux.Unlock()
