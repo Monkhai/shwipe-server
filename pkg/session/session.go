@@ -17,7 +17,6 @@ type Session struct {
 	wg                *sync.WaitGroup
 	mux               *sync.RWMutex
 	ctx               context.Context
-	cancel            context.CancelFunc
 	restaurantAPI     *restaurant.RestaurantAPI
 	msgChan           chan interface{}
 	RemoveSessionChan chan struct{}
@@ -28,7 +27,6 @@ func NewSession(
 	id string,
 	location protocol.Location,
 	ctx context.Context,
-	cancelCtx context.CancelFunc,
 	closeSessionChan chan struct{},
 	wg *sync.WaitGroup,
 ) *Session {
@@ -37,7 +35,6 @@ func NewSession(
 		Location:          location,
 		Restaurants:       []restaurant.Restaurant{},
 		ctx:               ctx,
-		cancel:            cancelCtx,
 		mux:               &sync.RWMutex{},
 		UsersMap:          NewSessionUsersMap(id),
 		restaurantAPI:     restaurant.NewRestaurantAPI(secrets.BASE_URL, secrets.GOOGLE_PLACES_API_KEY),

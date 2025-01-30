@@ -78,20 +78,23 @@ func (sm *SessionManager) IsSessionIn(session *Session) bool {
 }
 
 func (sm *SessionManager) CreateSession(usr *user.User, wg *sync.WaitGroup) (*Session, error) {
+	log.Println("Creating session")
 	sessionID := createSessionID()
-	_, cancel := context.WithCancel(sm.ctx)
 	removeSessionChan := make(chan struct{})
-	session := NewSession(sessionID, usr.Location, sm.ctx, cancel, removeSessionChan, wg)
+	session := NewSession(sessionID, usr.Location, sm.ctx, removeSessionChan, wg)
 	err := sm.addSession(session)
 	if err != nil {
 		log.Printf("Error adding session: %v", err)
 		return nil, err
 	}
+	log.Println("Session created")
+
 	err = session.AddUser(usr)
 	if err != nil {
 		log.Printf("Error adding user to session: %v", err)
 		return nil, err
 	}
+	log.Println("User added to session")
 	return session, nil
 }
 
@@ -104,11 +107,11 @@ func (sm *SessionManager) addSession(session *Session) error {
 		select {
 		case <-session.ctx.Done():
 			sm.RemoveSession(session.ID)
-			log.Println("Session removed")
+			log.Println("Session removed (from ctx.Done)")
 			return
 		case <-session.RemoveSessionChan:
+			log.Println("Removing session (from RemoveSessionChan)")
 			sm.RemoveSession(session.ID)
-			log.Println("Session removed")
 			return
 		}
 	}()
@@ -124,15 +127,14 @@ func createSessionID() string {
 }
 
 func (sm *SessionManager) RemoveSession(sessionID string) error {
-	sm.mux.Lock()
-	defer sm.mux.Unlock()
-	session, ok := sm.Sessions[sessionID]
-	if !ok {
-		return errors.New("session not found")
+	session, err := sm.GetSession(sessionID)
+	if err != nil {
+		return err
 	}
+
 	close(session.RemoveSessionChan)
 	close(session.msgChan)
-	session.cancel()
+	session.UsersMap.CloseAllDoneChans()
 
 	msg := servermessages.NewSessionClosedMessage()
 	usrs, err := session.UsersMap.GetAllUsers()
@@ -144,7 +146,7 @@ func (sm *SessionManager) RemoveSession(sessionID string) error {
 	}
 
 	delete(sm.Sessions, sessionID)
-	log.Println("Session removed")
+	log.Println("Session removed (from RemoveSession)")
 	return nil
 }
 
@@ -152,11 +154,10 @@ func (sm *SessionManager) RemoveUserFromAllSessions(usr *user.User) error {
 	for _, session := range sm.Sessions {
 		if session.IsUserInSession(usr.IDToken) {
 			session.RemoveUser(usr)
-			log.Println("User removed from session")
+			log.Println("User removed from session (from RemoveUserFromAllSessions)")
 			if session.UsersMap.GetUserCount() == 0 {
-				session.cancel()
 				sm.RemoveSession(session.ID)
-				log.Println("Session removed")
+				log.Println("Session removed (from RemoveUserFromAllSessions)")
 			}
 
 		}

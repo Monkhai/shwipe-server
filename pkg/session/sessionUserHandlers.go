@@ -12,9 +12,16 @@ func (s *Session) GetUser(userId string) (*user.User, bool) {
 }
 
 func (s *Session) AddUser(usr *user.User) error {
+	log.Println("Adding user to session")
 	err := s.UsersMap.AddUser(usr)
 	if err != nil {
 		return err
+	}
+
+	doneChan, ok := s.UsersMap.GetDoneChan(usr.IDToken)
+	if !ok {
+		log.Panicln("Done chan not found for user")
+		return nil
 	}
 
 	s.wg.Add(1)
@@ -24,6 +31,10 @@ func (s *Session) AddUser(usr *user.User) error {
 			select {
 			case <-usr.Ctx.Done():
 				log.Println("User context done (from session Add User)")
+				s.UsersMap.CloseDoneChan(usr.IDToken)
+				return
+			case <-doneChan:
+				log.Println("User done chan closed (from session Add User)")
 				return
 			case msg, ok := <-usr.SessionMsgChan:
 				{
@@ -35,7 +46,7 @@ func (s *Session) AddUser(usr *user.User) error {
 
 					if !s.IsUserInSession(usr.IDToken) {
 						log.Println("Received message from user not in session, skipping. session.AddUser")
-						s.RemoveUser(usr)
+						s.RemoveUserSilent(usr)
 						return
 					}
 					s.msgChan <- msg
@@ -69,7 +80,8 @@ func (s *Session) RemoveUser(usr *user.User) error {
 	if err != nil {
 		return err
 	}
-	log.Println("User removed from session", usr.IDToken, "with session id", s.ID)
+	s.UsersMap.CloseDoneChan(usr.IDToken)
+	log.Println("User removed from session")
 
 	msg := servermessages.NewRemovedFromSessionMessage(s.ID)
 	usr.WriteMessage(msg)

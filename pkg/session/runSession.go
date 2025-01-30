@@ -45,6 +45,11 @@ func (s *Session) RunSession(wg *sync.WaitGroup) {
 
 	for {
 		select {
+		case <-s.RemoveSessionChan:
+			{
+				log.Println("Session context cancelled (from RemoveSessionChan)")
+				return
+			}
 		case <-s.ctx.Done():
 			{
 				log.Println("Session context cancelled")
@@ -106,7 +111,6 @@ func (s *Session) RunSession(wg *sync.WaitGroup) {
 							if err != nil {
 								log.Printf("Error setting index: %v", err)
 							}
-
 						}
 					}
 

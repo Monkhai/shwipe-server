@@ -26,10 +26,6 @@ func (s *Server) listenToUserMessages(usr *user.User, wg *sync.WaitGroup) {
 				s.SessionManager.RemoveUserFromAllSessions(usr)
 				return
 			}
-		case msg := <-usr.SessionMsgChan:
-			{
-				log.Printf("Session Message received from user server listener: %T", msg)
-			}
 		case msg := <-usr.ServerMsgChan:
 			{
 				log.Printf("Message received from user: %T", msg)
@@ -61,6 +57,7 @@ func (s *Server) listenToUserMessages(usr *user.User, wg *sync.WaitGroup) {
 					}
 				case clientmessages.CreateSessionMessage:
 					{
+						log.Println("Create session message received")
 						session, err := s.SessionManager.CreateSession(usr, s.wg)
 						if err != nil {
 							log.Printf("Error creating session: %v", err)

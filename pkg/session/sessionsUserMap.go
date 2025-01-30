@@ -2,6 +2,7 @@ package session
 
 import (
 	"errors"
+	"log"
 	"sync"
 
 	"github.com/Monkhai/shwipe-server.git/pkg/user"
@@ -11,6 +12,7 @@ type SessionUsersMap struct {
 	sessionID string
 	IndexMap  map[string]int
 	UsersMap  map[string]*user.User
+	doneChans map[string]chan struct{}
 	mux       sync.RWMutex
 }
 
@@ -19,6 +21,7 @@ func NewSessionUsersMap(sessionID string) *SessionUsersMap {
 		sessionID: sessionID,
 		UsersMap:  make(map[string]*user.User),
 		IndexMap:  make(map[string]int),
+		doneChans: make(map[string]chan struct{}),
 		mux:       sync.RWMutex{},
 	}
 	for userID := range userIndexMap.IndexMap {
@@ -33,9 +36,10 @@ func (sum *SessionUsersMap) AddUser(usr *user.User) error {
 	}
 
 	sum.mux.Lock()
-	defer sum.mux.Unlock()
 	sum.UsersMap[usr.IDToken] = usr
 	sum.IndexMap[usr.IDToken] = 0
+	sum.mux.Unlock()
+	sum.SetDoneChan(usr.IDToken, make(chan struct{}))
 
 	return nil
 }
@@ -102,4 +106,38 @@ func (sum *SessionUsersMap) GetUserCount() int {
 	sum.mux.RLock()
 	defer sum.mux.RUnlock()
 	return len(sum.UsersMap)
+}
+
+func (sum *SessionUsersMap) SetDoneChan(userID string, doneChan chan struct{}) {
+	log.Println("Setting done chan for user")
+	sum.mux.Lock()
+	defer sum.mux.Unlock()
+	sum.doneChans[userID] = doneChan
+	log.Println("Set done chan for user")
+}
+
+func (sum *SessionUsersMap) GetDoneChan(userID string) (chan struct{}, bool) {
+	sum.mux.RLock()
+	defer sum.mux.RUnlock()
+	doneChan, ok := sum.doneChans[userID]
+	return doneChan, ok
+}
+
+func (sum *SessionUsersMap) CloseDoneChan(userID string) {
+	sum.mux.Lock()
+	defer sum.mux.Unlock()
+	doneChan, ok := sum.doneChans[userID]
+	if ok {
+		close(doneChan)
+		delete(sum.doneChans, userID)
+	}
+}
+
+func (sum *SessionUsersMap) CloseAllDoneChans() {
+	sum.mux.Lock()
+	defer sum.mux.Unlock()
+	for _, doneChan := range sum.doneChans {
+		close(doneChan)
+	}
+	sum.doneChans = make(map[string]chan struct{})
 }
