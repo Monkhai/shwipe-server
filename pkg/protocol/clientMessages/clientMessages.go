@@ -8,6 +8,7 @@ const (
 	START_SESSION_MESSAGE_TYPE   = "start_session"
 	CREATE_SESSION_MESSAGE_TYPE  = "create_session"
 	JOIN_SESSION_MESSAGE_TYPE    = "join_session"
+	LEAVE_SESSION_MESSAGE_TYPE   = "leave_session"
 )
 
 type BaseClientMessage struct {
@@ -36,6 +37,11 @@ type CreateSessionMessage struct {
 }
 
 type JoinSessionMessage struct {
+	BaseClientMessage
+	SessionId string `json:"session_id"`
+}
+
+type LeaveSessionMessage struct {
 	BaseClientMessage
 	SessionId string `json:"session_id"`
 }

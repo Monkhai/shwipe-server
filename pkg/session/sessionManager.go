@@ -6,6 +6,7 @@ import (
 	"log"
 	"sync"
 
+	servermessages "github.com/Monkhai/shwipe-server.git/pkg/protocol/serverMessages"
 	"github.com/Monkhai/shwipe-server.git/pkg/user"
 	"github.com/google/uuid"
 )
@@ -13,12 +14,14 @@ import (
 type SessionManager struct {
 	Sessions map[string]*Session
 	mux      *sync.RWMutex
+	ctx      context.Context
 }
 
-func NewSessionManager() *SessionManager {
+func NewSessionManager(ctx context.Context) *SessionManager {
 	return &SessionManager{
 		mux:      &sync.RWMutex{},
 		Sessions: make(map[string]*Session),
+		ctx:      ctx,
 	}
 }
 
@@ -74,10 +77,11 @@ func (sm *SessionManager) IsSessionIn(session *Session) bool {
 	return ok
 }
 
-func (sm *SessionManager) CreateSession(usr *user.User, wg *sync.WaitGroup, ctx context.Context) (*Session, error) {
+func (sm *SessionManager) CreateSession(usr *user.User, wg *sync.WaitGroup) (*Session, error) {
 	sessionID := createSessionID()
-	_, cancel := context.WithCancel(ctx)
-	session := NewSession(sessionID, usr.Location, ctx, cancel, wg)
+	_, cancel := context.WithCancel(sm.ctx)
+	removeSessionChan := make(chan struct{})
+	session := NewSession(sessionID, usr.Location, sm.ctx, cancel, removeSessionChan, wg)
 	err := sm.addSession(session)
 	if err != nil {
 		log.Printf("Error adding session: %v", err)
@@ -95,6 +99,20 @@ func (sm *SessionManager) addSession(session *Session) error {
 	if sm.IsSessionIn(session) {
 		return errors.New("session already in")
 	}
+
+	go func() {
+		select {
+		case <-session.ctx.Done():
+			sm.RemoveSession(session.ID)
+			log.Println("Session removed")
+			return
+		case <-session.RemoveSessionChan:
+			sm.RemoveSession(session.ID)
+			log.Println("Session removed")
+			return
+		}
+	}()
+
 	sm.mux.Lock()
 	defer sm.mux.Unlock()
 	sm.Sessions[session.ID] = session
@@ -108,17 +126,34 @@ func createSessionID() string {
 func (sm *SessionManager) RemoveSession(sessionID string) error {
 	sm.mux.Lock()
 	defer sm.mux.Unlock()
+	session, ok := sm.Sessions[sessionID]
+	if !ok {
+		return errors.New("session not found")
+	}
+	close(session.RemoveSessionChan)
+	close(session.msgChan)
+	session.cancel()
+
+	msg := servermessages.NewSessionClosedMessage()
+	usrs, err := session.UsersMap.GetAllUsers()
+	if err != nil {
+		return err
+	}
+	for _, usr := range usrs {
+		usr.WriteMessage(msg)
+	}
+
 	delete(sm.Sessions, sessionID)
+	log.Println("Session removed")
 	return nil
 }
 
-func (sm *SessionManager) RemoveUserFromAllSessions(userID string) error {
+func (sm *SessionManager) RemoveUserFromAllSessions(usr *user.User) error {
 	for _, session := range sm.Sessions {
-		if session.IsUserInSession(userID) {
-			session.RemoveUser(userID)
+		if session.IsUserInSession(usr.IDToken) {
+			session.RemoveUser(usr)
 			log.Println("User removed from session")
 			if session.UsersMap.GetUserCount() == 0 {
-				session.ctx.Done()
 				session.cancel()
 				sm.RemoveSession(session.ID)
 				log.Println("Session removed")

@@ -3,6 +3,7 @@ package session
 import (
 	"log"
 
+	servermessages "github.com/Monkhai/shwipe-server.git/pkg/protocol/serverMessages"
 	"github.com/Monkhai/shwipe-server.git/pkg/user"
 )
 
@@ -21,10 +22,12 @@ func (s *Session) AddUser(usr *user.User) error {
 		defer s.wg.Done()
 		for {
 			select {
-			case <-s.ctx.Done():
+			case <-usr.Ctx.Done():
+				log.Println("User context done (from session Add User)")
 				return
 			case msg, ok := <-usr.SessionMsgChan:
 				{
+					log.Println("User message received from AddUser")
 					if !ok {
 						log.Println("User context done (from session)")
 						return
@@ -34,16 +37,56 @@ func (s *Session) AddUser(usr *user.User) error {
 			}
 		}
 	}()
+	s.UpdateUserList(&usr.IDToken)
 
 	return nil
 }
 
-func (s *Session) RemoveUser(userId string) error {
-	//TODO: update all users with the new user list
-	return s.UsersMap.RemoveUser(userId)
+func (s *Session) RemoveUser(usr *user.User) error {
+	log.Println("Removing user from session")
+	err := s.UsersMap.RemoveUser(usr.IDToken)
+	if err != nil {
+		return err
+	}
+	log.Println("User removed from session", usr.IDToken, "with session id", s.ID)
+
+	msg := servermessages.NewRemovedFromSessionMessage(s.ID)
+	usr.WriteMessage(msg)
+
+	usrCount := s.UsersMap.GetUserCount()
+	if usrCount == 0 {
+		log.Println("Session", s.ID, "is empty, closing")
+		s.RemoveSessionChan <- struct{}{}
+		return nil
+	}
+
+	s.UpdateUserList(nil)
+	return nil
 }
 
 func (s *Session) IsUserInSession(userId string) bool {
 	_, isInSession := s.GetUser(userId)
 	return isInSession
+}
+
+func (s *Session) UpdateUserList(usrIDToAvoid *string) error {
+	usrs, err := s.UsersMap.GetAllUsers()
+	if err != nil {
+		return err
+	}
+	safeUsrs := make([]servermessages.SAFE_SessionUser, len(usrs))
+	for i, usr := range usrs {
+		safeUsrs[i] = servermessages.SAFE_SessionUser{
+			PhotoURL: usr.FirebaseUserRecord.PhotoURL,
+			UserName: usr.FirebaseUserRecord.DisplayName,
+		}
+	}
+	msg := servermessages.NewUpdateUserListMessage(safeUsrs, s.ID)
+	for _, usr := range usrs {
+		if usrIDToAvoid != nil && usr.IDToken == *usrIDToAvoid {
+			continue
+		}
+		usr.WriteMessage(msg)
+	}
+	return nil
 }

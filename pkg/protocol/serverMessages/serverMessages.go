@@ -5,12 +5,14 @@ import (
 )
 
 const (
-	ERROR_MESSAGE_TYPE               = "error"
-	RESTAURANT_UPDATE_MESSAGE_TYPE   = "restaurant_update"
-	SESSION_START_MESSAGE_TYPE       = "session_start"
-	SESSION_CREATED_MESSAGE_TYPE     = "session_create"
-	JOINT_SESSION_MESSAGE_TYPE       = "joint_session"
-	USER_JOINED_SESSION_MESSAGE_TYPE = "user_joined_session"
+	ERROR_MESSAGE_TYPE                = "error"
+	SESSION_START_MESSAGE_TYPE        = "session_start"
+	SESSION_CREATED_MESSAGE_TYPE      = "session_create"
+	JOINT_SESSION_MESSAGE_TYPE        = "joint_session"
+	UPDATE_RESTAURANTS_MESSAGE_TYPE   = "update_restaurants"
+	UPDATE_USER_LIST_MESSAGE_TYPE     = "update_user_list"
+	SESSION_CLOSED_MESSAGE_TYPE       = "session_closed"
+	REMOVED_FROM_SESSION_MESSAGE_TYPE = "removed_from_session"
 )
 
 type SAFE_SessionUser struct {
@@ -76,7 +78,7 @@ type RestaurantUpdateMessage struct {
 
 func NewRestaurantUpdateMessage(restaurants []restaurant.Restaurant) RestaurantUpdateMessage {
 	return RestaurantUpdateMessage{
-		BaseServerMessage: BaseServerMessage{Type: RESTAURANT_UPDATE_MESSAGE_TYPE},
+		BaseServerMessage: BaseServerMessage{Type: UPDATE_RESTAURANTS_MESSAGE_TYPE},
 		Restaurants:       restaurants,
 	}
 }
@@ -86,27 +88,49 @@ type JointSessionMessage struct {
 	SessionID   string                  `json:"session_id"`
 	Users       []SAFE_SessionUser      `json:"users"`
 	Restaurants []restaurant.Restaurant `json:"restaurants"`
+	IsStarted   bool                    `json:"is_started"`
 }
 
-func NewJointSessionMessage(sessionID string, restaurants []restaurant.Restaurant, users []SAFE_SessionUser) JointSessionMessage {
+func NewJointSessionMessage(sessionID string, restaurants []restaurant.Restaurant, users []SAFE_SessionUser, isStarted bool) JointSessionMessage {
 	return JointSessionMessage{
 		BaseServerMessage: BaseServerMessage{Type: JOINT_SESSION_MESSAGE_TYPE},
 		SessionID:         sessionID,
 		Users:             users,
 		Restaurants:       restaurants,
+		IsStarted:         isStarted,
 	}
 }
 
-type UserJoinedSessionMessage struct {
+type UpdateUserListMessage struct {
 	BaseServerMessage
-	SessionID string           `json:"session_id"`
-	User      SAFE_SessionUser `json:"user"`
+	Users     []SAFE_SessionUser `json:"users"`
+	SessionID string             `json:"session_id"`
 }
 
-func NewUserJoinedSessionMessage(sessionID string, user SAFE_SessionUser) UserJoinedSessionMessage {
-	return UserJoinedSessionMessage{
-		BaseServerMessage: BaseServerMessage{Type: USER_JOINED_SESSION_MESSAGE_TYPE},
+func NewUpdateUserListMessage(users []SAFE_SessionUser, sessionID string) UpdateUserListMessage {
+	return UpdateUserListMessage{
+		BaseServerMessage: BaseServerMessage{Type: UPDATE_USER_LIST_MESSAGE_TYPE},
+		Users:             users,
 		SessionID:         sessionID,
-		User:              user,
+	}
+}
+
+type SessionClosedMessage struct {
+	BaseServerMessage
+}
+
+func NewSessionClosedMessage() SessionClosedMessage {
+	return SessionClosedMessage{
+		BaseServerMessage: BaseServerMessage{Type: SESSION_CLOSED_MESSAGE_TYPE},
+	}
+}
+
+type RemovedFromSessionMessage struct {
+	BaseServerMessage
+}
+
+func NewRemovedFromSessionMessage(sessionID string) RemovedFromSessionMessage {
+	return RemovedFromSessionMessage{
+		BaseServerMessage: BaseServerMessage{Type: REMOVED_FROM_SESSION_MESSAGE_TYPE},
 	}
 }

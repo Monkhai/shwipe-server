@@ -23,25 +23,45 @@ func (s *Server) listenToUserMessages(usr *user.User, wg *sync.WaitGroup) {
 			{
 				log.Printf("User context done (from server)")
 				s.UserManager.RemoveUser(usr.IDToken)
-				s.SessionManager.RemoveUserFromAllSessions(usr.IDToken)
+				s.SessionManager.RemoveUserFromAllSessions(usr)
 				return
+			}
+		case msg := <-usr.SessionMsgChan:
+			{
+				log.Printf("Session Message received from user server listener: %T", msg)
 			}
 		case msg := <-usr.ServerMsgChan:
 			{
 				log.Printf("Message received from user: %T", msg)
 				switch m := msg.(type) {
 				/*
-					these are the messages that are not related to sessions
-					they are handled by the server and not by the session
+					these are the messages that are not related
+					to general server operations
 				*/
 				case clientmessages.UpdateLocationMessage:
 				case clientmessages.IndexUpdateMessage:
 					{
 						continue
 					}
+				case clientmessages.LeaveSessionMessage:
+					{
+						log.Println("Leave session message received in server listener", m.SessionId)
+						s, err := s.SessionManager.GetSession(m.SessionId)
+						if err != nil {
+							log.Printf("Session not found: %v", m.SessionId)
+							continue
+						}
+
+						err = s.RemoveUser(usr)
+						if err != nil {
+							log.Printf("Error removing user from session: %v", err)
+							continue
+						}
+						log.Println("user removed")
+					}
 				case clientmessages.CreateSessionMessage:
 					{
-						session, err := s.SessionManager.CreateSession(usr, s.wg, s.ctx)
+						session, err := s.SessionManager.CreateSession(usr, s.wg)
 						if err != nil {
 							log.Printf("Error creating session: %v", err)
 							continue
@@ -104,9 +124,10 @@ func (s *Server) listenToUserMessages(usr *user.User, wg *sync.WaitGroup) {
 								UserName: usr.FirebaseUserRecord.DisplayName,
 							})
 						}
-						usr.WriteMessage(servermessages.NewJointSessionMessage(session.ID, session.Restaurants, safeUsers))
+						usr.WriteMessage(servermessages.NewJointSessionMessage(session.ID, session.Restaurants, safeUsers, session.IsStarted))
 						log.Println("joint session message sent")
 					}
+
 				default:
 					{
 						log.Printf("Unhandled message type received: %T with content: %+v", m, m)

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"sync"
 
-	servermessages "github.com/Monkhai/shwipe-server.git/pkg/protocol/serverMessages"
 	"github.com/Monkhai/shwipe-server.git/pkg/user"
 )
 
@@ -28,90 +27,79 @@ func NewSessionUsersMap(sessionID string) *SessionUsersMap {
 	return &userIndexMap
 }
 
-func (u *SessionUsersMap) AddUser(usr *user.User) error {
-	if u.IsUserInMap(usr.IDToken) {
+func (sum *SessionUsersMap) AddUser(usr *user.User) error {
+	if sum.IsUserInMap(usr.IDToken) {
 		return errors.New("user already in map")
 	}
 
-	usrs, err := u.GetAllUsers()
-	if err != nil {
-		return err
-	}
-	for _, usr := range usrs {
-		usr.WriteMessage(servermessages.NewUserJoinedSessionMessage(u.sessionID, servermessages.SAFE_SessionUser{
-			PhotoURL: usr.FirebaseUserRecord.PhotoURL,
-			UserName: usr.FirebaseUserRecord.DisplayName,
-		}))
-	}
+	sum.mux.Lock()
+	defer sum.mux.Unlock()
+	sum.UsersMap[usr.IDToken] = usr
+	sum.IndexMap[usr.IDToken] = 0
 
-	u.mux.Lock()
-	defer u.mux.Unlock()
-	u.UsersMap[usr.IDToken] = usr
-	u.IndexMap[usr.IDToken] = 0
 	return nil
 }
 
-func (u *SessionUsersMap) GetUser(userID string) (*user.User, bool) {
-	u.mux.RLock()
-	defer u.mux.RUnlock()
-	usr, ok := u.UsersMap[userID]
+func (sum *SessionUsersMap) RemoveUser(userID string) error {
+	if !sum.IsUserInMap(userID) {
+		return errors.New("user not found")
+	}
+	sum.mux.Lock()
+	defer sum.mux.Unlock()
+	delete(sum.UsersMap, userID)
+	delete(sum.IndexMap, userID)
+	return nil
+}
+
+func (sum *SessionUsersMap) GetUser(userID string) (*user.User, bool) {
+	sum.mux.RLock()
+	defer sum.mux.RUnlock()
+	usr, ok := sum.UsersMap[userID]
 	return usr, ok
 }
 
-func (u *SessionUsersMap) GetAllUsers() ([]*user.User, error) {
-	u.mux.RLock()
-	defer u.mux.RUnlock()
-	users := make([]*user.User, 0, len(u.UsersMap))
-	for _, usr := range u.UsersMap {
+func (sum *SessionUsersMap) GetAllUsers() ([]*user.User, error) {
+	sum.mux.RLock()
+	defer sum.mux.RUnlock()
+	users := make([]*user.User, 0, len(sum.UsersMap))
+	for _, usr := range sum.UsersMap {
 		users = append(users, usr)
 	}
 	return users, nil
 }
 
-func (u *SessionUsersMap) IsUserInMap(userID string) bool {
-	u.mux.RLock()
-	defer u.mux.RUnlock()
-	_, inIndexMap := u.IndexMap[userID]
-	_, inUsersMap := u.UsersMap[userID]
+func (sum *SessionUsersMap) IsUserInMap(userID string) bool {
+	sum.mux.RLock()
+	defer sum.mux.RUnlock()
+	_, inIndexMap := sum.IndexMap[userID]
+	_, inUsersMap := sum.UsersMap[userID]
 	if !inIndexMap || !inUsersMap {
 		return false
 	}
-
 	return true
 }
 
-func (u *SessionUsersMap) GetIndex(userID string) (int, error) {
-	if !u.IsUserInMap(userID) {
+func (sum *SessionUsersMap) GetIndex(userID string) (int, error) {
+	if !sum.IsUserInMap(userID) {
 		return 0, errors.New("user not found")
 	}
-	u.mux.RLock()
-	defer u.mux.RUnlock()
-	return u.IndexMap[userID], nil
+	sum.mux.RLock()
+	defer sum.mux.RUnlock()
+	return sum.IndexMap[userID], nil
 }
 
-func (u *SessionUsersMap) SetIndex(userID string, index int) error {
-	if !u.IsUserInMap(userID) {
+func (sum *SessionUsersMap) SetIndex(userID string, index int) error {
+	if !sum.IsUserInMap(userID) {
 		return errors.New("user not found")
 	}
-	u.mux.Lock()
-	defer u.mux.Unlock()
-	u.IndexMap[userID] = index
+	sum.mux.Lock()
+	defer sum.mux.Unlock()
+	sum.IndexMap[userID] = index
 	return nil
 }
 
-func (u *SessionUsersMap) GetUserCount() int {
-	u.mux.RLock()
-	defer u.mux.RUnlock()
-	return len(u.UsersMap)
-}
-
-func (u *SessionUsersMap) RemoveUser(userID string) error {
-	if !u.IsUserInMap(userID) {
-		return errors.New("user not found")
-	}
-	u.mux.Lock()
-	defer u.mux.Unlock()
-	delete(u.UsersMap, userID)
-	delete(u.IndexMap, userID)
-	return nil
+func (sum *SessionUsersMap) GetUserCount() int {
+	sum.mux.RLock()
+	defer sum.mux.RUnlock()
+	return len(sum.UsersMap)
 }

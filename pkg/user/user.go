@@ -41,6 +41,8 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 	defer func() {
 		wg.Done()
 		close(u.ServerMsgChan)
+		close(u.SessionMsgChan)
+		log.Println("User channels closed")
 	}()
 
 	messageChan := make(chan []byte)
@@ -59,6 +61,11 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 
 	for {
 		select {
+		case <-u.Ctx.Done():
+			{
+				log.Println("User context done (from user)")
+				return
+			}
 		case msg := <-messageChan:
 			{
 				var baseMsg clientmessages.BaseClientMessage
@@ -67,7 +74,7 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 					continue
 				}
 
-				log.Printf("Received message: %v", baseMsg.Type)
+				log.Printf("user received message: %v", baseMsg.Type)
 
 				switch baseMsg.Type {
 				case clientmessages.UPDATE_INDEX_MESSAGE_TYPE:
@@ -120,6 +127,16 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 						u.ServerMsgChan <- joinSessionMessage
 						log.Println("Join session message sent")
 					}
+				case clientmessages.LEAVE_SESSION_MESSAGE_TYPE:
+					{
+						var leaveSessionMessage clientmessages.LeaveSessionMessage
+						if err := json.Unmarshal(msg, &leaveSessionMessage); err != nil {
+							log.Printf("Error unmarshalling leave session message: %v", err)
+							continue
+						}
+						u.ServerMsgChan <- leaveSessionMessage
+						log.Println("Leave session message sent")
+					}
 				}
 			}
 		case err := <-errorChan:
@@ -139,11 +156,7 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 				u.cancelCtx()
 				return
 			}
-		case <-u.Ctx.Done():
-			{
-				log.Println("User context done (from user)")
-				return
-			}
+
 		}
 	}
 }

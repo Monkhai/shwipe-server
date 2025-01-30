@@ -28,7 +28,7 @@ func NewServer(ctx context.Context, wg *sync.WaitGroup) (*Server, error) {
 		ctx:            ctx,
 		wg:             wg,
 		mux:            &sync.RWMutex{},
-		SessionManager: session.NewSessionManager(),
+		SessionManager: session.NewSessionManager(ctx),
 		UserManager:    user.NewUserManager(),
 		app:            a,
 	}, nil

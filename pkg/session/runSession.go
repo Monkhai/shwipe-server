@@ -12,8 +12,17 @@ const FETCH_THRESHOLD = 2
 const BATCH_SIZE = 20
 
 func (s *Session) RunSession(wg *sync.WaitGroup) {
-	log.Println("Running session")
-	defer wg.Done()
+	s.mux.Lock()
+	s.IsStarted = true
+	s.mux.Unlock()
+
+	defer func() {
+		s.mux.Lock()
+		s.IsStarted = false
+		s.mux.Unlock()
+		wg.Done()
+	}()
+
 	log.Println("Getting restaurants")
 	restaurants, nextPageToken, err := s.restaurantAPI.GetResaturants(s.Location.Lat, s.Location.Lng, nil)
 	if err != nil {
@@ -45,6 +54,7 @@ func (s *Session) RunSession(wg *sync.WaitGroup) {
 			{
 				switch msg := msg.(type) {
 				case clientmessages.BaseClientMessage:
+				case clientmessages.LeaveSessionMessage:
 				case clientmessages.JoinSessionMessage:
 				case clientmessages.CreateSessionMessage:
 				case clientmessages.StartSessionMessage:
@@ -99,6 +109,7 @@ func (s *Session) RunSession(wg *sync.WaitGroup) {
 
 						}
 					}
+
 				default:
 					{
 						log.Printf("Unknown message type: %v", msg)
