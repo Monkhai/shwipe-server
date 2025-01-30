@@ -48,6 +48,21 @@ func (s *Session) AddUser(usr *user.User) error {
 	return nil
 }
 
+func (s *Session) RemoveUserSilent(usr *user.User) error {
+	err := s.UsersMap.RemoveUser(usr.IDToken)
+	if err != nil {
+		return err
+	}
+
+	usrCount := s.UsersMap.GetUserCount()
+	if usrCount == 0 {
+		log.Println("Session", s.ID, "is empty, closing")
+		s.RemoveSessionChan <- struct{}{}
+	}
+
+	return nil
+}
+
 func (s *Session) RemoveUser(usr *user.User) error {
 	log.Println("Removing user from session")
 	err := s.UsersMap.RemoveUser(usr.IDToken)
