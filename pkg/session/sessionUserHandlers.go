@@ -32,6 +32,12 @@ func (s *Session) AddUser(usr *user.User) error {
 						log.Println("User context done (from session)")
 						return
 					}
+
+					if !s.IsUserInSession(usr.IDToken) {
+						log.Println("Received message from user not in session, skipping. session.AddUser")
+						s.RemoveUser(usr)
+						return
+					}
 					s.msgChan <- msg
 				}
 			}
