@@ -51,7 +51,7 @@ func (s *Server) WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 		conn.Close()
 		return
 	}
-	usr := user.NewUser(userRecord, idToken, conn, s.ctx, location)
+	usr := user.NewUser(userRecord, idToken, conn, s.ctx, location, s.app.AuthenticateUser)
 	s.UserManager.AddUser(usr)
 
 	s.wg.Add(2)

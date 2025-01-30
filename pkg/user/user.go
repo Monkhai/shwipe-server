@@ -21,9 +21,10 @@ type User struct {
 	ServerMsgChan      chan interface{}
 	SessionMsgChan     chan interface{}
 	Location           protocol.Location
+	AuthenticateUser   func(token string) (string, error)
 }
 
-func NewUser(userRecord *auth.UserRecord, idToken string, conn *websocket.Conn, ctx context.Context, location protocol.Location) *User {
+func NewUser(userRecord *auth.UserRecord, idToken string, conn *websocket.Conn, ctx context.Context, location protocol.Location, authenticateUser func(token string) (string, error)) *User {
 	ctx, cancel := context.WithCancel(ctx)
 	return &User{
 		FirebaseUserRecord: userRecord,
@@ -34,6 +35,7 @@ func NewUser(userRecord *auth.UserRecord, idToken string, conn *websocket.Conn, 
 		Location:           location,
 		ServerMsgChan:      make(chan interface{}),
 		SessionMsgChan:     make(chan interface{}),
+		AuthenticateUser:   authenticateUser,
 	}
 }
 
@@ -75,6 +77,15 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 				}
 
 				log.Printf("user received message: %v", baseMsg.Type)
+				userID, err := u.AuthenticateUser(u.IDToken)
+				if err != nil {
+					log.Printf("Error authenticating user: %v", err)
+					continue
+				}
+				if userID != u.FirebaseUserRecord.UID {
+					log.Printf("User ID mismatch: %s != %s", userID, u.FirebaseUserRecord.UID)
+					continue
+				}
 
 				switch baseMsg.Type {
 				case clientmessages.UPDATE_INDEX_MESSAGE_TYPE:
