@@ -34,7 +34,6 @@ func (s *Server) WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	location := protocol.Location{Lat: lat, Lng: lng}
 
-	log.Printf("Authenticating user with token")
 	userID, err := s.app.AuthenticateUser(idToken)
 	if err != nil {
 		log.Printf("Error authenticating user: %v", err)
@@ -42,16 +41,16 @@ func (s *Server) WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 		conn.Close()
 		return
 	}
-	log.Printf("User authenticated with token")
 
-	userRecord, err := s.app.GetUserRecord(userID)
+	dbUser, err := s.db.GetUser(userID)
 	if err != nil {
-		log.Printf("Error getting user record: %v", err)
+		log.Printf("Error getting user: %v", err)
 		conn.WriteMessage(websocket.CloseMessage, []byte(""))
 		conn.Close()
 		return
 	}
-	usr := user.NewUser(userRecord, idToken, conn, s.ctx, location, s.app.AuthenticateUser)
+
+	usr := user.NewUser(dbUser, idToken, conn, s.ctx, location, s.app.AuthenticateUser)
 	s.UserManager.AddUser(usr)
 
 	s.wg.Add(2)

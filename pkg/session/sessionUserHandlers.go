@@ -110,8 +110,9 @@ func (s *Session) UpdateUserList(usrIDToAvoid *string) error {
 	safeUsrs := make([]servermessages.SAFE_SessionUser, len(usrs))
 	for i, usr := range usrs {
 		safeUsrs[i] = servermessages.SAFE_SessionUser{
-			PhotoURL: usr.FirebaseUserRecord.PhotoURL,
-			UserName: usr.FirebaseUserRecord.DisplayName,
+			PhotoURL:    usr.DBUser.PhotoURL,
+			ID:          usr.DBUser.PublicID,
+			DisplayName: usr.DBUser.DisplayName,
 		}
 	}
 	msg := servermessages.NewUpdateUserListMessage(safeUsrs, s.ID)

@@ -6,36 +6,36 @@ import (
 	"log"
 	"sync"
 
-	"firebase.google.com/go/auth"
+	"github.com/Monkhai/shwipe-server.git/pkg/db"
 	"github.com/Monkhai/shwipe-server.git/pkg/protocol"
 	clientmessages "github.com/Monkhai/shwipe-server.git/pkg/protocol/clientMessages"
 	"github.com/gorilla/websocket"
 )
 
 type User struct {
-	IDToken            string
-	Conn               *websocket.Conn
-	FirebaseUserRecord *auth.UserRecord
-	Ctx                context.Context
-	cancelCtx          context.CancelFunc
-	ServerMsgChan      chan interface{}
-	SessionMsgChan     chan interface{}
-	Location           protocol.Location
-	AuthenticateUser   func(token string) (string, error)
+	IDToken             string
+	DBUser              *db.DBUser
+	Conn                *websocket.Conn
+	Ctx                 context.Context
+	cancelCtx           context.CancelFunc
+	ServerMsgChan       chan interface{}
+	SessionMsgChan      chan interface{}
+	Location            protocol.Location
+	AuthenticateMessage func(token string) (string, error)
 }
 
-func NewUser(userRecord *auth.UserRecord, idToken string, conn *websocket.Conn, ctx context.Context, location protocol.Location, authenticateUser func(token string) (string, error)) *User {
+func NewUser(dbUser *db.DBUser, idToken string, conn *websocket.Conn, ctx context.Context, location protocol.Location, authenticateMessage func(token string) (string, error)) *User {
 	ctx, cancel := context.WithCancel(ctx)
 	return &User{
-		FirebaseUserRecord: userRecord,
-		IDToken:            idToken,
-		Conn:               conn,
-		Ctx:                ctx,
-		cancelCtx:          cancel,
-		Location:           location,
-		ServerMsgChan:      make(chan interface{}),
-		SessionMsgChan:     make(chan interface{}),
-		AuthenticateUser:   authenticateUser,
+		IDToken:             idToken,
+		DBUser:              dbUser,
+		Conn:                conn,
+		Ctx:                 ctx,
+		cancelCtx:           cancel,
+		Location:            location,
+		ServerMsgChan:       make(chan interface{}),
+		SessionMsgChan:      make(chan interface{}),
+		AuthenticateMessage: authenticateMessage,
 	}
 }
 
@@ -77,13 +77,13 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 				}
 
 				log.Printf("user received message: %v", baseMsg.Type)
-				userID, err := u.AuthenticateUser(u.IDToken)
+				userID, err := u.AuthenticateMessage(u.IDToken)
 				if err != nil {
 					log.Printf("Error authenticating user: %v", err)
 					continue
 				}
-				if userID != u.FirebaseUserRecord.UID {
-					log.Printf("User ID mismatch: %s != %s", userID, u.FirebaseUserRecord.UID)
+				if userID != u.DBUser.ID {
+					log.Printf("User ID mismatch: %s != %s", userID, u.DBUser.ID)
 					continue
 				}
 
@@ -96,7 +96,6 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 							continue
 						}
 						u.SessionMsgChan <- indexUpdateMessage
-						log.Println("Index update message sent")
 					}
 				case clientmessages.CREATE_SESSION_MESSAGE_TYPE:
 					{
@@ -106,7 +105,6 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 							continue
 						}
 						u.ServerMsgChan <- createSessionMessage
-						log.Println("Create session message sent")
 					}
 				case clientmessages.START_SESSION_MESSAGE_TYPE:
 					{
@@ -116,7 +114,6 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 							continue
 						}
 						u.ServerMsgChan <- startSessionMessage
-						log.Println("Start session message sent")
 					}
 				case clientmessages.UPDATE_LOCATION_MESSAGE_TYPE:
 					{
@@ -126,7 +123,6 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 							continue
 						}
 						u.SessionMsgChan <- updateLocationMessage
-						log.Println("Update location message sent")
 					}
 				case clientmessages.JOIN_SESSION_MESSAGE_TYPE:
 					{
@@ -136,7 +132,6 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 							continue
 						}
 						u.ServerMsgChan <- joinSessionMessage
-						log.Println("Join session message sent")
 					}
 				case clientmessages.LEAVE_SESSION_MESSAGE_TYPE:
 					{
@@ -146,7 +141,6 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 							continue
 						}
 						u.ServerMsgChan <- leaveSessionMessage
-						log.Println("Leave session message sent")
 					}
 				}
 			}
@@ -159,9 +153,9 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 						websocket.CloseGoingAway,
 						websocket.CloseAbnormalClosure,
 						websocket.CloseNoStatusReceived) {
-						log.Printf("Player %s disconnected gracefully\n", u.FirebaseUserRecord.UID)
+						log.Printf("Player %s disconnected gracefully\n", u.DBUser.ID)
 					} else {
-						log.Printf("Unexpected error reading from player %s: %v\n", u.FirebaseUserRecord.UID, err)
+						log.Printf("Unexpected error reading from player %s: %v\n", u.DBUser.ID, err)
 					}
 				}
 				u.cancelCtx()

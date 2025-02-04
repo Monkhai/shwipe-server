@@ -23,19 +23,18 @@ func (s *Session) RunSession(wg *sync.WaitGroup) {
 		wg.Done()
 	}()
 
-	log.Println("Getting restaurants")
 	restaurants, nextPageToken, err := s.restaurantAPI.GetResaturants(s.Location.Lat, s.Location.Lng, nil)
 	if err != nil {
 		log.Printf("Error getting restaurants: %v", err)
 		return
 	}
-	log.Println("Got restaurants")
 
 	safeUsers := make([]servermessages.SAFE_SessionUser, 0, len(s.UsersMap.UsersMap))
 	for _, usr := range s.UsersMap.UsersMap {
 		safeUsers = append(safeUsers, servermessages.SAFE_SessionUser{
-			PhotoURL: usr.FirebaseUserRecord.PhotoURL,
-			UserName: usr.FirebaseUserRecord.DisplayName,
+			ID:          usr.DBUser.PublicID,
+			DisplayName: usr.DBUser.DisplayName,
+			PhotoURL:    usr.DBUser.PhotoURL,
 		})
 	}
 	msg := servermessages.NewSessionStartMessage(s.ID, safeUsers, restaurants)

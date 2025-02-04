@@ -1,3 +1,4 @@
 /secrets
 serviceAccountKey.json
 **/serviceAccountKey.json
+prod-ca-2021.crt

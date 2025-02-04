@@ -16,8 +16,9 @@ const (
 )
 
 type SAFE_SessionUser struct {
-	PhotoURL string `json:"photo_url"`
-	UserName string `json:"user_name"`
+	ID          string `json:"id"`
+	DisplayName string `json:"display_name"`
+	PhotoURL    string `json:"photo_url"`
 }
 
 type BaseServerMessage struct {

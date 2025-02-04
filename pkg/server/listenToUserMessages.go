@@ -72,8 +72,9 @@ func (s *Server) listenToUserMessages(usr *user.User, wg *sync.WaitGroup) {
 						var safeUsers []servermessages.SAFE_SessionUser
 						for _, usr := range usrs {
 							safeUsers = append(safeUsers, servermessages.SAFE_SessionUser{
-								PhotoURL: usr.FirebaseUserRecord.PhotoURL,
-								UserName: usr.FirebaseUserRecord.DisplayName,
+								ID:          usr.IDToken,
+								DisplayName: usr.DBUser.DisplayName,
+								PhotoURL:    usr.DBUser.PhotoURL,
 							})
 						}
 						msg := servermessages.NewSessionCreatedMessage(session.ID, safeUsers)
@@ -117,8 +118,9 @@ func (s *Server) listenToUserMessages(usr *user.User, wg *sync.WaitGroup) {
 						var safeUsers []servermessages.SAFE_SessionUser
 						for _, usr := range usrs {
 							safeUsers = append(safeUsers, servermessages.SAFE_SessionUser{
-								PhotoURL: usr.FirebaseUserRecord.PhotoURL,
-								UserName: usr.FirebaseUserRecord.DisplayName,
+								ID:          usr.IDToken,
+								DisplayName: usr.DBUser.DisplayName,
+								PhotoURL:    usr.DBUser.PhotoURL,
 							})
 						}
 						usr.WriteMessage(servermessages.NewJointSessionMessage(session.ID, session.Restaurants, safeUsers, session.IsStarted))

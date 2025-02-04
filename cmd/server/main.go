@@ -54,7 +54,8 @@ func main() {
 
 	http.HandleFunc("/ws", s.WebSocketHandler)
 	http.HandleFunc("/get-sessions", s.GetSessions)
-
+	http.HandleFunc("/get-user", s.GetUser)
+	http.HandleFunc("/get-users", s.GetUsers)
 	go func() {
 		log.Println("Starting server on port 8080")
 		log.Fatal(http.ListenAndServe(":8080", nil))
