@@ -21,6 +21,7 @@ type Session struct {
 	sessionDbOps      *SessionDbOps
 	msgChan           chan interface{}
 	RemoveSessionChan chan struct{}
+	CloseOnce         sync.Once
 	IsStarted         bool
 }
 
@@ -43,6 +44,7 @@ func NewSession(
 		msgChan:           make(chan interface{}),
 		wg:                wg,
 		RemoveSessionChan: closeSessionChan,
+		CloseOnce:         sync.Once{},
 		IsStarted:         false,
 		sessionDbOps:      sessionDbOps,
 	}

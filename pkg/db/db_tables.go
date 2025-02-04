@@ -4,11 +4,13 @@ var DB_Tables = struct {
 	UsersTable         UsersTable
 	PublicUserIdsTable PublicUserIdsTable
 	SessionsTable      SessionsTable
+	SessionUsersTable  SessionUsersTable
 	FriendshipsTable   FriendshipsTable
 }{
 	UsersTable:         UsersTableVar,
 	PublicUserIdsTable: PublicUserIdsTableVar,
 	SessionsTable:      SessionsTableVar,
+	SessionUsersTable:  SessionUsersTableVar,
 	FriendshipsTable:   FriendshipsTableVar,
 }
 

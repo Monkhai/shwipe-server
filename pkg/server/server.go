@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/Monkhai/shwipe-server.git/pkg/app"
 	"github.com/Monkhai/shwipe-server.git/pkg/db"
@@ -47,7 +48,13 @@ func NewServer(ctx context.Context, wg *sync.WaitGroup) (*Server, error) {
 func (s *Server) Shutdown() error {
 	log.Println("Shutting down server")
 	defer s.DB.Close()
-	err := s.DB.DeleteAllSessions()
+	s.wg.Add(1)
+	defer s.wg.Done()
+
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	err := s.DB.DeleteAllSessions(cleanupCtx)
+
 	if err != nil {
 		log.Printf("Error deleting sessions: %v", err)
 		return err

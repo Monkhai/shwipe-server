@@ -1,1 +1,1 @@
-SELECT * FROM {{.Sessions.TableName}} WHERE id = $1;
+SELECT * FROM {{.SessionsTable.TableName}} WHERE {{.SessionsTable.ID}} = $1;

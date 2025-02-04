@@ -1,1 +1,1 @@
-TRUNCATE TABLE {{.SessionsTable.TableName}};
+DELETE FROM {{.SessionsTable.TableName}};

@@ -1,1 +1,1 @@
-INSERT INTO {{.SessionUsersTable.TableName}} (session_id, user_id) VALUES (?, ?);
+INSERT INTO {{.SessionUsersTable.TableName}} ({{.SessionUsersTable.SessionID}}, {{.SessionUsersTable.UserID}}) VALUES ($1, $2);

@@ -80,7 +80,7 @@ func (sm *SessionManager) CreateSession(usr *user.User, wg *sync.WaitGroup, sess
 	sessionID := createSessionID()
 	removeSessionChan := make(chan struct{})
 	session := NewSession(sessionID, usr.Location, sm.ctx, removeSessionChan, wg, sessionDbOps)
-	err := sm.addSession(session)
+	err := sm.AddSession(session)
 	if err != nil {
 		log.Printf("Error adding session: %v", err)
 		return nil, err
@@ -96,7 +96,7 @@ func (sm *SessionManager) CreateSession(usr *user.User, wg *sync.WaitGroup, sess
 	return session, nil
 }
 
-func (sm *SessionManager) addSession(session *Session) error {
+func (sm *SessionManager) AddSession(session *Session) error {
 	if sm.IsSessionIn(session) {
 		return errors.New("session already in")
 	}
@@ -120,7 +120,7 @@ func (sm *SessionManager) addSession(session *Session) error {
 			log.Printf("Error inserting session: %v", err)
 			session.RemoveSessionChan <- struct{}{}
 		}
-		log.Println("Session inserted into db")
+		log.Println("Session inserted into db", session.ID)
 	}()
 
 	sm.mux.Lock()
@@ -139,9 +139,11 @@ func (sm *SessionManager) RemoveSession(sessionID string) error {
 		return err
 	}
 
-	close(session.RemoveSessionChan)
-	close(session.msgChan)
-	session.UsersMap.CloseAllDoneChans()
+	session.CloseOnce.Do(func() {
+		close(session.RemoveSessionChan)
+		close(session.msgChan)
+		session.UsersMap.CloseAllDoneChans()
+	})
 
 	msg := servermessages.NewSessionClosedMessage()
 	usrs, err := session.UsersMap.GetAllUsers()
@@ -156,7 +158,7 @@ func (sm *SessionManager) RemoveSession(sessionID string) error {
 	if err != nil {
 		return err
 	}
-	log.Println("Session deleted from db (from RemoveSession)")
+	log.Println("Session deleted from db", sessionID)
 
 	delete(sm.Sessions, sessionID)
 	log.Println("Session removed (from RemoveSession)")

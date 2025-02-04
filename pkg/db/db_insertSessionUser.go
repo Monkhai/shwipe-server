@@ -1,7 +1,7 @@
 package db
 
 func (db *DB) InsertSessionUser(sessionID string, userID string) error {
-	query, err := db.CreateQuery("queries/sessions/query_insertSessionUser.sql", "insertSessionUser", DB_Tables)
+	query, err := db.CreateQuery("queries/session_users/query_insertSessionUser.sql", "insertSessionUser", DB_Tables)
 	if err != nil {
 		return err
 	}
