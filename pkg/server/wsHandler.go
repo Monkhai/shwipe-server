@@ -1,10 +1,12 @@
 package server
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 
 	"github.com/Monkhai/shwipe-server.git/pkg/protocol"
+	servermessages "github.com/Monkhai/shwipe-server.git/pkg/protocol/serverMessages"
 	"github.com/Monkhai/shwipe-server.git/pkg/user"
 	"github.com/gorilla/websocket"
 )
@@ -42,6 +44,16 @@ func (s *Server) WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	loadingConnectionMsg := servermessages.NewLoadingConnectionMessage()
+	msgBytes, err := json.Marshal(loadingConnectionMsg)
+	if err != nil {
+		log.Printf("Error marshalling message: %v", err)
+		conn.WriteMessage(websocket.CloseMessage, []byte(""))
+		conn.Close()
+		return
+	}
+	conn.WriteMessage(websocket.TextMessage, msgBytes)
+
 	dbUser, err := s.DB.GetUser(userID)
 	if err != nil {
 		log.Printf("Error getting user: %v", err)
@@ -53,6 +65,16 @@ func (s *Server) WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 
 	usr := user.NewUser(dbUser, idToken, conn, s.ctx, location, s.app.AuthenticateUser)
 	s.UserManager.AddUser(usr)
+
+	connectionEstablised := servermessages.NewConnectionEstablishedMessage()
+	msgBytes, err = json.Marshal(connectionEstablised)
+	if err != nil {
+		log.Printf("Error marshalling message: %v", err)
+		conn.WriteMessage(websocket.CloseMessage, []byte(""))
+		conn.Close()
+		return
+	}
+	conn.WriteMessage(websocket.TextMessage, msgBytes)
 
 	s.wg.Add(2)
 	go usr.Listen(s.wg)

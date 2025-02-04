@@ -5,14 +5,16 @@ import (
 )
 
 const (
-	ERROR_MESSAGE_TYPE                = "error"
-	SESSION_START_MESSAGE_TYPE        = "session_start"
-	SESSION_CREATED_MESSAGE_TYPE      = "session_create"
-	JOINT_SESSION_MESSAGE_TYPE        = "joint_session"
-	UPDATE_RESTAURANTS_MESSAGE_TYPE   = "update_restaurants"
-	UPDATE_USER_LIST_MESSAGE_TYPE     = "update_user_list"
-	SESSION_CLOSED_MESSAGE_TYPE       = "session_closed"
-	REMOVED_FROM_SESSION_MESSAGE_TYPE = "removed_from_session"
+	LOADING_CONNECTION_MESSAGE_TYPE     = "loading_connection"
+	CONNECTION_ESTABLISHED_MESSAGE_TYPE = "connection_established"
+	ERROR_MESSAGE_TYPE                  = "error"
+	SESSION_START_MESSAGE_TYPE          = "session_start"
+	SESSION_CREATED_MESSAGE_TYPE        = "session_create"
+	JOINT_SESSION_MESSAGE_TYPE          = "joint_session"
+	UPDATE_RESTAURANTS_MESSAGE_TYPE     = "update_restaurants"
+	UPDATE_USER_LIST_MESSAGE_TYPE       = "update_user_list"
+	SESSION_CLOSED_MESSAGE_TYPE         = "session_closed"
+	REMOVED_FROM_SESSION_MESSAGE_TYPE   = "removed_from_session"
 )
 
 type SAFE_SessionUser struct {
@@ -134,4 +136,20 @@ func NewRemovedFromSessionMessage(sessionID string) RemovedFromSessionMessage {
 	return RemovedFromSessionMessage{
 		BaseServerMessage: BaseServerMessage{Type: REMOVED_FROM_SESSION_MESSAGE_TYPE},
 	}
+}
+
+type LoadingConnectionMessage struct {
+	BaseServerMessage
+}
+
+func NewLoadingConnectionMessage() LoadingConnectionMessage {
+	return LoadingConnectionMessage{BaseServerMessage: BaseServerMessage{Type: LOADING_CONNECTION_MESSAGE_TYPE}}
+}
+
+type ConnectionEstablishedMessage struct {
+	BaseServerMessage
+}
+
+func NewConnectionEstablishedMessage() ConnectionEstablishedMessage {
+	return ConnectionEstablishedMessage{BaseServerMessage: BaseServerMessage{Type: CONNECTION_ESTABLISHED_MESSAGE_TYPE}}
 }

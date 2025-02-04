@@ -99,7 +99,6 @@ func (s *Server) listenToUserMessages(usr *user.User, wg *sync.WaitGroup) {
 					}
 				case clientmessages.JoinSessionMessage:
 					{
-						log.Printf("Join session message received: %v", m)
 						session, err := s.SessionManager.GetSession(m.SessionId)
 						if err != nil {
 							log.Printf("Session not found: %v", m.SessionId)
