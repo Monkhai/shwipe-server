@@ -14,18 +14,18 @@ import (
 type DBFunc func(sessionID string) error
 
 type SessionManager struct {
-	Sessions       map[string]*Session
-	mux            *sync.RWMutex
-	ctx            context.Context
-	sessionStorage SessionStorage
+	Sessions              map[string]*Session
+	mux                   *sync.RWMutex
+	ctx                   context.Context
+	sessionManagerStorage SessionManagerStorage
 }
 
-func NewSessionManager(ctx context.Context, sessionStorage SessionStorage) *SessionManager {
+func NewSessionManager(ctx context.Context, sessionStorage SessionManagerStorage) *SessionManager {
 	return &SessionManager{
-		mux:            &sync.RWMutex{},
-		Sessions:       make(map[string]*Session),
-		ctx:            ctx,
-		sessionStorage: sessionStorage,
+		mux:                   &sync.RWMutex{},
+		Sessions:              make(map[string]*Session),
+		ctx:                   ctx,
+		sessionManagerStorage: sessionStorage,
 	}
 }
 
@@ -75,11 +75,11 @@ func (sm *SessionManager) IsSessionIn(session *Session) bool {
 	return ok
 }
 
-func (sm *SessionManager) CreateSession(usr *user.User, wg *sync.WaitGroup) (*Session, error) {
+func (sm *SessionManager) CreateSession(usr *user.User, wg *sync.WaitGroup, sessionDbOps *SessionDbOps) (*Session, error) {
 	log.Println("Creating session")
 	sessionID := createSessionID()
 	removeSessionChan := make(chan struct{})
-	session := NewSession(sessionID, usr.Location, sm.ctx, removeSessionChan, wg)
+	session := NewSession(sessionID, usr.Location, sm.ctx, removeSessionChan, wg, sessionDbOps)
 	err := sm.addSession(session)
 	if err != nil {
 		log.Printf("Error adding session: %v", err)
@@ -115,7 +115,7 @@ func (sm *SessionManager) addSession(session *Session) error {
 	}()
 
 	go func() {
-		err := sm.sessionStorage.InsertSession(session.ID)
+		err := sm.sessionManagerStorage.InsertSession(session.ID)
 		if err != nil {
 			log.Printf("Error inserting session: %v", err)
 			session.RemoveSessionChan <- struct{}{}
@@ -152,7 +152,7 @@ func (sm *SessionManager) RemoveSession(sessionID string) error {
 		usr.WriteMessage(msg)
 	}
 
-	err = sm.sessionStorage.DeleteSession(sessionID)
+	err = sm.sessionManagerStorage.DeleteSession(sessionID)
 	if err != nil {
 		return err
 	}

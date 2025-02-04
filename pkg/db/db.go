@@ -82,3 +82,8 @@ func (db *DB) CreateQuery(queryFile, templateName string, data interface{}) (str
 func (db *DB) RunQuery(sql string, args ...interface{}) (pgx.Rows, error) {
 	return db.pool.Query(db.ctx, sql, args...)
 }
+
+func (db *DB) ExecuteQuery(sql string, args ...interface{}) error {
+	_, err := db.pool.Exec(db.ctx, sql, args...)
+	return err
+}

@@ -31,7 +31,7 @@ func NewServer(ctx context.Context, wg *sync.WaitGroup) (*Server, error) {
 		return &Server{}, err
 	}
 
-	sessionStorage := session.NewSessionStorageManager(db)
+	sessionStorage := session.NewSessionMangerDbOps(db)
 
 	return &Server{
 		ctx:            ctx,

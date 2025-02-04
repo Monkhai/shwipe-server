@@ -4,10 +4,12 @@ var DB_Tables = struct {
 	UsersTable         UsersTable
 	PublicUserIdsTable PublicUserIdsTable
 	SessionsTable      SessionsTable
+	FriendshipsTable   FriendshipsTable
 }{
 	UsersTable:         UsersTableVar,
 	PublicUserIdsTable: PublicUserIdsTableVar,
 	SessionsTable:      SessionsTableVar,
+	FriendshipsTable:   FriendshipsTableVar,
 }
 
 //===============================================================
@@ -54,4 +56,33 @@ var SessionsTableVar = SessionsTable{
 	TableName: "sessions",
 	ID:        "id",
 	CreatedAt: "created_at",
+}
+
+// ===============================================================
+type SessionUsersTable struct {
+	TableName string
+	ID        string
+	SessionID string
+	UserID    string
+}
+
+var SessionUsersTableVar = SessionUsersTable{
+	TableName: "session_users",
+	ID:        "id",
+	SessionID: "session_id",
+	UserID:    "user_id",
+}
+
+// ===============================================================
+
+type FriendshipsTable struct {
+	TableName string
+	UserID1   string
+	UserID2   string
+}
+
+var FriendshipsTableVar = FriendshipsTable{
+	TableName: "friendships",
+	UserID1:   "user_id_1",
+	UserID2:   "user_id_2",
 }

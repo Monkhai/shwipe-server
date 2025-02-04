@@ -55,6 +55,13 @@ func (s *Session) AddUser(usr *user.User) error {
 		}
 	}()
 	s.UpdateUserList(&usr.IDToken)
+	go func() {
+		err := s.sessionDbOps.InsertSessionUser(s.ID, usr.DBUser.ID)
+		if err != nil {
+			log.Println("Error inserting session user", err)
+		}
+		log.Println("Session user inserted into db")
+	}()
 
 	return nil
 }
@@ -71,6 +78,13 @@ func (s *Session) RemoveUserSilent(usr *user.User) error {
 		s.RemoveSessionChan <- struct{}{}
 	}
 
+	go func() {
+		err := s.sessionDbOps.DeleteSessionUser(s.ID, usr.DBUser.ID)
+		if err != nil {
+			log.Println("Error deleting session user", err)
+		}
+		log.Println("Session user deleted from db")
+	}()
 	return nil
 }
 
@@ -94,6 +108,13 @@ func (s *Session) RemoveUser(usr *user.User) error {
 	}
 
 	s.UpdateUserList(nil)
+	go func() {
+		err := s.sessionDbOps.DeleteSessionUser(s.ID, usr.DBUser.ID)
+		if err != nil {
+			log.Println("Error deleting session user", err)
+		}
+		log.Println("Session user deleted from db")
+	}()
 	return nil
 }
 

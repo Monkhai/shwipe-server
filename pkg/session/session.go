@@ -18,6 +18,7 @@ type Session struct {
 	mux               *sync.RWMutex
 	ctx               context.Context
 	restaurantAPI     *restaurant.RestaurantAPI
+	sessionDbOps      *SessionDbOps
 	msgChan           chan interface{}
 	RemoveSessionChan chan struct{}
 	IsStarted         bool
@@ -29,6 +30,7 @@ func NewSession(
 	ctx context.Context,
 	closeSessionChan chan struct{},
 	wg *sync.WaitGroup,
+	sessionDbOps *SessionDbOps,
 ) *Session {
 	return &Session{
 		ID:                id,
@@ -42,5 +44,6 @@ func NewSession(
 		wg:                wg,
 		RemoveSessionChan: closeSessionChan,
 		IsStarted:         false,
+		sessionDbOps:      sessionDbOps,
 	}
 }

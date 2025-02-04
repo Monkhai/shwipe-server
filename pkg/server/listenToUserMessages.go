@@ -6,6 +6,7 @@ import (
 
 	clientmessages "github.com/Monkhai/shwipe-server.git/pkg/protocol/clientMessages"
 	servermessages "github.com/Monkhai/shwipe-server.git/pkg/protocol/serverMessages"
+	"github.com/Monkhai/shwipe-server.git/pkg/session"
 	"github.com/Monkhai/shwipe-server.git/pkg/user"
 )
 
@@ -58,7 +59,8 @@ func (s *Server) listenToUserMessages(usr *user.User, wg *sync.WaitGroup) {
 				case clientmessages.CreateSessionMessage:
 					{
 						log.Println("Create session message received")
-						session, err := s.SessionManager.CreateSession(usr, s.wg)
+						sessionDbOps := session.NewSessionDbOps(s.DB)
+						session, err := s.SessionManager.CreateSession(usr, s.wg, sessionDbOps)
 						if err != nil {
 							log.Printf("Error creating session: %v", err)
 							continue
