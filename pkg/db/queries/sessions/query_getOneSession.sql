@@ -1,0 +1,1 @@
+SELECT * FROM {{.Sessions.TableName}} WHERE id = $1;

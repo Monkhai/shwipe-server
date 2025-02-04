@@ -6,7 +6,7 @@ import (
 )
 
 func (s *Server) GetUsers(w http.ResponseWriter, r *http.Request) {
-	users, err := s.db.GetUsers()
+	users, err := s.DB.GetUsers()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

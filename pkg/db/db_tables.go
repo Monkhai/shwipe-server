@@ -3,9 +3,11 @@ package db
 var DB_Tables = struct {
 	UsersTable         UsersTable
 	PublicUserIdsTable PublicUserIdsTable
+	SessionsTable      SessionsTable
 }{
 	UsersTable:         UsersTableVar,
 	PublicUserIdsTable: PublicUserIdsTableVar,
+	SessionsTable:      SessionsTableVar,
 }
 
 //===============================================================
@@ -38,4 +40,18 @@ var PublicUserIdsTableVar = PublicUserIdsTable{
 	TableName: "public_user_ids",
 	ID:        "id",
 	PublicID:  "public_id",
+}
+
+//===============================================================
+
+type SessionsTable struct {
+	TableName string
+	ID        string
+	CreatedAt string
+}
+
+var SessionsTableVar = SessionsTable{
+	TableName: "sessions",
+	ID:        "id",
+	CreatedAt: "created_at",
 }

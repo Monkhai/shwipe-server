@@ -11,17 +11,21 @@ import (
 	"github.com/google/uuid"
 )
 
+type DBFunc func(sessionID string) error
+
 type SessionManager struct {
-	Sessions map[string]*Session
-	mux      *sync.RWMutex
-	ctx      context.Context
+	Sessions       map[string]*Session
+	mux            *sync.RWMutex
+	ctx            context.Context
+	sessionStorage SessionStorage
 }
 
-func NewSessionManager(ctx context.Context) *SessionManager {
+func NewSessionManager(ctx context.Context, sessionStorage SessionStorage) *SessionManager {
 	return &SessionManager{
-		mux:      &sync.RWMutex{},
-		Sessions: make(map[string]*Session),
-		ctx:      ctx,
+		mux:            &sync.RWMutex{},
+		Sessions:       make(map[string]*Session),
+		ctx:            ctx,
+		sessionStorage: sessionStorage,
 	}
 }
 
@@ -33,12 +37,6 @@ func (sm *SessionManager) GetSession(id string) (*Session, error) {
 		return nil, errors.New("session not found")
 	}
 	return session, nil
-}
-
-func (sm *SessionManager) DeleteSession(id string) {
-	sm.mux.Lock()
-	defer sm.mux.Unlock()
-	delete(sm.Sessions, id)
 }
 
 func (sm *SessionManager) GetAllSessions() []*Session {
@@ -106,14 +104,23 @@ func (sm *SessionManager) addSession(session *Session) error {
 	go func() {
 		select {
 		case <-session.ctx.Done():
+			log.Println("Session context done (from addSession)")
 			sm.RemoveSession(session.ID)
-			log.Println("Session removed (from ctx.Done)")
 			return
 		case <-session.RemoveSessionChan:
 			log.Println("Removing session (from RemoveSessionChan)")
 			sm.RemoveSession(session.ID)
 			return
 		}
+	}()
+
+	go func() {
+		err := sm.sessionStorage.InsertSession(session.ID)
+		if err != nil {
+			log.Printf("Error inserting session: %v", err)
+			session.RemoveSessionChan <- struct{}{}
+		}
+		log.Println("Session inserted into db")
 	}()
 
 	sm.mux.Lock()
@@ -145,8 +152,15 @@ func (sm *SessionManager) RemoveSession(sessionID string) error {
 		usr.WriteMessage(msg)
 	}
 
+	err = sm.sessionStorage.DeleteSession(sessionID)
+	if err != nil {
+		return err
+	}
+	log.Println("Session deleted from db (from RemoveSession)")
+
 	delete(sm.Sessions, sessionID)
 	log.Println("Session removed (from RemoveSession)")
+
 	return nil
 }
 
@@ -161,6 +175,13 @@ func (sm *SessionManager) RemoveUserFromAllSessions(usr *user.User) error {
 			}
 
 		}
+	}
+	return nil
+}
+
+func (sm *SessionManager) RemoveAllSessions() error {
+	for _, session := range sm.Sessions {
+		go sm.RemoveSession(session.ID)
 	}
 	return nil
 }

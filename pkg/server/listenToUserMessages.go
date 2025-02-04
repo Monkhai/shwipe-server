@@ -64,6 +64,7 @@ func (s *Server) listenToUserMessages(usr *user.User, wg *sync.WaitGroup) {
 							continue
 						}
 						log.Println("Session created")
+
 						usrs, err := session.UsersMap.GetAllUsers()
 						if err != nil {
 							log.Printf("Error getting users: %v", err)
@@ -72,7 +73,7 @@ func (s *Server) listenToUserMessages(usr *user.User, wg *sync.WaitGroup) {
 						var safeUsers []servermessages.SAFE_SessionUser
 						for _, usr := range usrs {
 							safeUsers = append(safeUsers, servermessages.SAFE_SessionUser{
-								ID:          usr.IDToken,
+								ID:          usr.DBUser.PublicID,
 								DisplayName: usr.DBUser.DisplayName,
 								PhotoURL:    usr.DBUser.PhotoURL,
 							})

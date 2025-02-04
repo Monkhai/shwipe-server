@@ -12,7 +12,7 @@ func (s *Server) GetUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "id is required", http.StatusBadRequest)
 		return
 	}
-	user, err := s.db.GetUser(id)
+	user, err := s.DB.GetUser(id)
 	if err != nil {
 		log.Println(err, "from getUser.go")
 		http.Error(w, err.Error(), http.StatusInternalServerError)

@@ -1,0 +1,1 @@
+TRUNCATE TABLE {{.SessionsTable.TableName}};

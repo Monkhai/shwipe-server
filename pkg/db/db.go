@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"log"
 	"os"
 	"text/template"
 
@@ -52,7 +53,10 @@ func NewDB(ctx context.Context) (*DB, error) {
 }
 
 func (db *DB) Close() {
-	db.pool.Close()
+	if db.pool != nil {
+		db.pool.Close()
+	}
+	log.Println("DB closed")
 }
 
 func (db *DB) CreateQuery(queryFile, templateName string, data interface{}) (string, error) {

@@ -1,0 +1,1 @@
+INSERT INTO {{.SessionsTable.TableName}} (id, created_at) VALUES ($1, $2);

@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"log"
 	"sync"
 
 	"github.com/Monkhai/shwipe-server.git/pkg/app"
@@ -17,7 +18,7 @@ type Server struct {
 	SessionManager *session.SessionManager
 	UserManager    *user.UserManager
 	app            *app.App
-	db             *db.DB
+	DB             *db.DB
 }
 
 func NewServer(ctx context.Context, wg *sync.WaitGroup) (*Server, error) {
@@ -30,13 +31,28 @@ func NewServer(ctx context.Context, wg *sync.WaitGroup) (*Server, error) {
 		return &Server{}, err
 	}
 
+	sessionStorage := session.NewSessionStorageManager(db)
+
 	return &Server{
 		ctx:            ctx,
 		wg:             wg,
 		mux:            &sync.RWMutex{},
-		SessionManager: session.NewSessionManager(ctx),
+		SessionManager: session.NewSessionManager(ctx, sessionStorage),
 		UserManager:    user.NewUserManager(),
 		app:            a,
-		db:             db,
+		DB:             db,
 	}, nil
+}
+
+func (s *Server) Shutdown() error {
+	log.Println("Shutting down server")
+	defer s.DB.Close()
+	err := s.DB.DeleteAllSessions()
+	if err != nil {
+		log.Printf("Error deleting sessions: %v", err)
+		return err
+	}
+
+	log.Println("Sessions deleted")
+	return nil
 }
