@@ -20,6 +20,16 @@ func (s *Server) WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	loadingConnectionMsg := servermessages.NewLoadingConnectionMessage()
+	msgBytes, err := json.Marshal(loadingConnectionMsg)
+	if err != nil {
+		log.Printf("Error marshalling message: %v", err)
+		conn.WriteMessage(websocket.CloseMessage, []byte(""))
+		conn.Close()
+		return
+	}
+	conn.WriteMessage(websocket.TextMessage, msgBytes)
+
 	idToken, location, err := processParameters(r, conn)
 	if err != nil {
 		log.Printf("error processing parameters: %s", err)
@@ -41,16 +51,6 @@ func (s *Server) WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 		conn.Close()
 		return
 	}
-
-	loadingConnectionMsg := servermessages.NewLoadingConnectionMessage()
-	msgBytes, err := json.Marshal(loadingConnectionMsg)
-	if err != nil {
-		log.Printf("Error marshalling message: %v", err)
-		conn.WriteMessage(websocket.CloseMessage, []byte(""))
-		conn.Close()
-		return
-	}
-	conn.WriteMessage(websocket.TextMessage, msgBytes)
 
 	usr := user.NewUser(dbUser, idToken, conn, s.ctx, location, s.app.AuthenticateUser)
 	s.UserManager.AddUser(usr)
