@@ -76,7 +76,6 @@ func (sm *SessionManager) IsSessionIn(session *Session) bool {
 }
 
 func (sm *SessionManager) CreateSession(usr *user.User, wg *sync.WaitGroup, sessionDbOps *SessionDbOps) (*Session, error) {
-	log.Println("Creating session")
 	sessionID := createSessionID()
 	removeSessionChan := make(chan struct{})
 	session := NewSession(sessionID, usr.Location, sm.ctx, removeSessionChan, wg, sessionDbOps)
@@ -101,6 +100,13 @@ func (sm *SessionManager) AddSession(session *Session) error {
 		return errors.New("session already in")
 	}
 
+	err := sm.sessionManagerStorage.InsertSession(session.ID)
+	if err != nil {
+		log.Printf("Error inserting session: %v", err)
+		session.RemoveSessionChan <- struct{}{}
+	}
+	log.Println("Session inserted into db", session.ID)
+
 	go func() {
 		select {
 		case <-session.ctx.Done():
@@ -112,15 +118,6 @@ func (sm *SessionManager) AddSession(session *Session) error {
 			sm.RemoveSession(session.ID)
 			return
 		}
-	}()
-
-	go func() {
-		err := sm.sessionManagerStorage.InsertSession(session.ID)
-		if err != nil {
-			log.Printf("Error inserting session: %v", err)
-			session.RemoveSessionChan <- struct{}{}
-		}
-		log.Println("Session inserted into db", session.ID)
 	}()
 
 	sm.mux.Lock()

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -61,6 +62,18 @@ func main() {
 	http.HandleFunc("/get-user", s.GetUser)
 	http.HandleFunc("/get-users", s.GetUsers)
 	go func() {
+		addrs, err := net.InterfaceAddrs()
+		if err != nil {
+			log.Printf("Error getting interface addresses: %v", err)
+		} else {
+			for _, addr := range addrs {
+				if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+					if ipnet.IP.To4() != nil {
+						log.Printf("Server internal IP: %s", ipnet.IP.String())
+					}
+				}
+			}
+		}
 		log.Println("Starting server on port 8080")
 		log.Fatal(http.ListenAndServe(":8080", nil))
 	}()

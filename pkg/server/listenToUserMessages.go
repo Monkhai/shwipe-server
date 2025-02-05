@@ -29,7 +29,6 @@ func (s *Server) listenToUserMessages(usr *user.User, wg *sync.WaitGroup) {
 			}
 		case msg := <-usr.ServerMsgChan:
 			{
-				log.Printf("Message received from user: %T", msg)
 				switch m := msg.(type) {
 				/*
 					these are the messages that are not related
@@ -58,14 +57,12 @@ func (s *Server) listenToUserMessages(usr *user.User, wg *sync.WaitGroup) {
 					}
 				case clientmessages.CreateSessionMessage:
 					{
-						log.Println("Create session message received")
 						sessionDbOps := session.NewSessionDbOps(s.DB)
 						session, err := s.SessionManager.CreateSession(usr, s.wg, sessionDbOps)
 						if err != nil {
 							log.Printf("Error creating session: %v", err)
 							continue
 						}
-						log.Println("Session created")
 
 						usrs, err := session.UsersMap.GetAllUsers()
 						if err != nil {
@@ -82,7 +79,14 @@ func (s *Server) listenToUserMessages(usr *user.User, wg *sync.WaitGroup) {
 						}
 						msg := servermessages.NewSessionCreatedMessage(session.ID, safeUsers)
 						usr.WriteMessage(msg)
-						log.Println("Session created message sent")
+					}
+				case clientmessages.CreateSessionWithFriendsMessage:
+					{
+						err := s.createSessionWithUser(usr, m.FriendIds)
+						if err != nil {
+							log.Printf("Error creating session with friends: %v", err)
+							continue
+						}
 					}
 				case clientmessages.StartSessionMessage:
 					{

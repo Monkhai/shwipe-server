@@ -3,12 +3,13 @@ package clientmessages
 import "github.com/Monkhai/shwipe-server.git/pkg/protocol"
 
 const (
-	UPDATE_INDEX_MESSAGE_TYPE    = "update_index"
-	UPDATE_LOCATION_MESSAGE_TYPE = "update_location"
-	START_SESSION_MESSAGE_TYPE   = "start_session"
-	CREATE_SESSION_MESSAGE_TYPE  = "create_session"
-	JOIN_SESSION_MESSAGE_TYPE    = "join_session"
-	LEAVE_SESSION_MESSAGE_TYPE   = "leave_session"
+	UPDATE_INDEX_MESSAGE_TYPE                = "update_index"
+	UPDATE_LOCATION_MESSAGE_TYPE             = "update_location"
+	START_SESSION_MESSAGE_TYPE               = "start_session"
+	CREATE_SESSION_MESSAGE_TYPE              = "create_session"
+	CREATE_SESSION_WITH_FRIENDS_MESSAGE_TYPE = "create_session_with_friends"
+	JOIN_SESSION_MESSAGE_TYPE                = "join_session"
+	LEAVE_SESSION_MESSAGE_TYPE               = "leave_session"
 )
 
 type BaseClientMessage struct {
@@ -44,4 +45,9 @@ type JoinSessionMessage struct {
 type LeaveSessionMessage struct {
 	BaseClientMessage
 	SessionId string `json:"session_id"`
+}
+
+type CreateSessionWithFriendsMessage struct {
+	BaseClientMessage
+	FriendIds []string `json:"friend_ids"`
 }

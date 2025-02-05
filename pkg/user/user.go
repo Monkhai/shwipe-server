@@ -44,7 +44,7 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 		wg.Done()
 		close(u.ServerMsgChan)
 		close(u.SessionMsgChan)
-		log.Println("User channels closed")
+		log.Println("user.Listen function finished")
 	}()
 
 	messageChan := make(chan []byte)
@@ -105,6 +105,15 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 							continue
 						}
 						u.ServerMsgChan <- createSessionMessage
+					}
+				case clientmessages.CREATE_SESSION_WITH_FRIENDS_MESSAGE_TYPE:
+					{
+						var createSessionWithFriendsMessage clientmessages.CreateSessionWithFriendsMessage
+						if err := json.Unmarshal(msg, &createSessionWithFriendsMessage); err != nil {
+							log.Printf("Error unmarshalling create session with friends message: %v", err)
+							continue
+						}
+						u.ServerMsgChan <- createSessionWithFriendsMessage
 					}
 				case clientmessages.START_SESSION_MESSAGE_TYPE:
 					{
