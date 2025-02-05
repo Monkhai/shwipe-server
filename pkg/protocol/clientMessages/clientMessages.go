@@ -21,6 +21,7 @@ type IndexUpdateMessage struct {
 	BaseClientMessage
 	Index     int    `json:"index"`
 	SessionId string `json:"session_id"`
+	Liked     bool   `json:"liked"`
 }
 
 type UpdateLocationMessage struct {

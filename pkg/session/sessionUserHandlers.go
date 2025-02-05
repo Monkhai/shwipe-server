@@ -8,17 +8,21 @@ import (
 )
 
 func (s *Session) GetUser(userId string) (*user.User, bool) {
-	return s.UsersMap.GetUser(userId)
+	return s.SessionUserManager.GetUser(userId)
 }
 
 func (s *Session) AddUser(usr *user.User) error {
 	log.Println("Adding user to session")
-	err := s.UsersMap.AddUser(usr)
+	err := s.SessionUserManager.AddUser(usr)
+	if err != nil {
+		return err
+	}
+	err = s.VoteManager.AddUser(usr.IDToken)
 	if err != nil {
 		return err
 	}
 
-	doneChan, ok := s.UsersMap.GetDoneChan(usr.IDToken)
+	doneChan, ok := s.SessionUserManager.GetDoneChan(usr.IDToken)
 	if !ok {
 		log.Panicln("Done chan not found for user")
 		return nil
@@ -31,14 +35,13 @@ func (s *Session) AddUser(usr *user.User) error {
 			select {
 			case <-usr.Ctx.Done():
 				log.Println("User context done (from session Add User)")
-				s.UsersMap.CloseDoneChan(usr.IDToken)
+				s.SessionUserManager.CloseDoneChan(usr.IDToken)
 				return
 			case <-doneChan:
 				log.Println("User done chan closed (from session Add User)")
 				return
 			case msg, ok := <-usr.SessionMsgChan:
 				{
-					log.Println("User message received from AddUser")
 					if !ok {
 						log.Println("User context done (from session)")
 						return
@@ -67,12 +70,13 @@ func (s *Session) AddUser(usr *user.User) error {
 }
 
 func (s *Session) RemoveUserSilent(usr *user.User) error {
-	err := s.UsersMap.RemoveUser(usr.IDToken)
+	err := s.SessionUserManager.RemoveUser(usr.IDToken)
 	if err != nil {
 		return err
 	}
+	s.SessionUserManager.CloseDoneChan(usr.IDToken)
 
-	usrCount := s.UsersMap.GetUserCount()
+	usrCount := s.SessionUserManager.GetUserCount()
 	if usrCount == 0 {
 		log.Println("Session", s.ID, "is empty, closing")
 		s.RemoveSessionChan <- struct{}{}
@@ -90,17 +94,17 @@ func (s *Session) RemoveUserSilent(usr *user.User) error {
 
 func (s *Session) RemoveUser(usr *user.User) error {
 	log.Println("Removing user from session")
-	err := s.UsersMap.RemoveUser(usr.IDToken)
+	err := s.SessionUserManager.RemoveUser(usr.IDToken)
 	if err != nil {
 		return err
 	}
-	s.UsersMap.CloseDoneChan(usr.IDToken)
+	s.SessionUserManager.CloseDoneChan(usr.IDToken)
 	log.Println("User removed from session")
 
 	msg := servermessages.NewRemovedFromSessionMessage(s.ID)
 	usr.WriteMessage(msg)
 
-	usrCount := s.UsersMap.GetUserCount()
+	usrCount := s.SessionUserManager.GetUserCount()
 	if usrCount == 0 {
 		log.Println("Session", s.ID, "is empty, closing")
 		s.RemoveSessionChan <- struct{}{}
@@ -124,7 +128,7 @@ func (s *Session) IsUserInSession(userId string) bool {
 }
 
 func (s *Session) UpdateUserList(usrIDToAvoid *string) error {
-	usrs, err := s.UsersMap.GetAllUsers()
+	usrs, err := s.SessionUserManager.GetAllUsers()
 	if err != nil {
 		return err
 	}

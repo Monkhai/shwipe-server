@@ -29,8 +29,8 @@ func (s *Session) RunSession(wg *sync.WaitGroup) {
 		return
 	}
 
-	safeUsers := make([]servermessages.SAFE_SessionUser, 0, len(s.UsersMap.UsersMap))
-	for _, usr := range s.UsersMap.UsersMap {
+	safeUsers := make([]servermessages.SAFE_SessionUser, 0, len(s.SessionUserManager.UsersMap))
+	for _, usr := range s.SessionUserManager.UsersMap {
 		safeUsers = append(safeUsers, servermessages.SAFE_SessionUser{
 			ID:          usr.DBUser.PublicID,
 			DisplayName: usr.DBUser.DisplayName,
@@ -38,7 +38,7 @@ func (s *Session) RunSession(wg *sync.WaitGroup) {
 		})
 	}
 	msg := servermessages.NewSessionStartMessage(s.ID, safeUsers, restaurants)
-	for _, usr := range s.UsersMap.UsersMap {
+	for _, usr := range s.SessionUserManager.UsersMap {
 		usr.WriteMessage(msg)
 	}
 
@@ -72,45 +72,62 @@ func (s *Session) RunSession(wg *sync.WaitGroup) {
 					}
 				case clientmessages.IndexUpdateMessage:
 					{
-						{
-							usr, ok := s.GetUser(msg.TokenID)
-							if !ok {
-								log.Printf("User not found: %v", msg.TokenID)
-								return
-							}
+						usr, ok := s.GetUser(msg.TokenID)
+						if !ok {
+							log.Printf("User not found: %v", msg.TokenID)
+							return
+						}
 
-							if (msg.Index+FETCH_THRESHOLD)%BATCH_SIZE != 0 {
-								err := s.UsersMap.SetIndex(usr.IDToken, msg.Index)
-								if err != nil {
-									log.Printf("Error setting index: %v", err)
-								}
-								continue
-							}
+						isAllLiked := s.VoteManager.SetVote(msg.Index, msg.TokenID, msg.Liked)
+						// if all users have liked the restaurant, send a match found message
+						if isAllLiked {
+							msg := servermessages.NewMatchFoundMessage(msg.Index)
+							s.SessionUserManager.Broadcast(msg)
+						}
 
-							left := len(restaurants) - msg.Index
-							if left <= FETCH_THRESHOLD {
-								newRestaurants, newNextPageToken, err := s.restaurantAPI.GetResaturants(s.Location.Lat, s.Location.Lng, nextPageToken)
-								if err != nil {
-									log.Printf("Error getting restaurants: %v", err)
-									return
-								}
+						// session is over.
+						nextIndex := msg.Index + 1
 
-								updateRestaurantsMsg := servermessages.NewRestaurantUpdateMessage(newRestaurants)
-								usr.WriteMessage(updateRestaurantsMsg)
-
-								restaurants = append(restaurants, newRestaurants...)
-								nextPageToken = newNextPageToken
-							} else {
-								nextBatchIndex := msg.Index + FETCH_THRESHOLD
-								nextBatch := restaurants[nextBatchIndex : nextBatchIndex+BATCH_SIZE]
-								updateRestaurantsMsg := servermessages.NewRestaurantUpdateMessage(nextBatch)
-								usr.WriteMessage(updateRestaurantsMsg)
-							}
-							err := s.UsersMap.SetIndex(usr.IDToken, msg.Index)
+						/*
+							if the index is not 2 less than a multiple of BATCH_SIZE
+							then the user does not need more restaurants
+							and we don't need to fetch moe restaurants
+						*/
+						if (nextIndex+FETCH_THRESHOLD)%BATCH_SIZE != 0 {
+							err := s.SessionUserManager.SetIndex(usr.IDToken, nextIndex)
 							if err != nil {
 								log.Printf("Error setting index: %v", err)
 							}
+							continue
 						}
+
+						/*
+							if the number of of restaurants left is less than or equal to the fetch threshold
+							then we need to fetch more restaurants from the API
+						*/
+						if len(restaurants)-nextIndex <= FETCH_THRESHOLD {
+							newRestaurants, newNextPageToken, err := s.restaurantAPI.GetResaturants(s.Location.Lat, s.Location.Lng, nextPageToken)
+							if err != nil {
+								log.Printf("Error getting restaurants: %v", err)
+								return
+							}
+
+							updateRestaurantsMsg := servermessages.NewRestaurantUpdateMessage(newRestaurants)
+							usr.WriteMessage(updateRestaurantsMsg)
+
+							restaurants = append(restaurants, newRestaurants...)
+							nextPageToken = newNextPageToken
+						} else {
+							nextBatchIndex := nextIndex + FETCH_THRESHOLD
+							nextBatch := restaurants[nextBatchIndex : nextBatchIndex+BATCH_SIZE]
+							updateRestaurantsMsg := servermessages.NewRestaurantUpdateMessage(nextBatch)
+							usr.WriteMessage(updateRestaurantsMsg)
+						}
+						err := s.SessionUserManager.SetIndex(usr.IDToken, nextIndex)
+						if err != nil {
+							log.Printf("Error setting index: %v", err)
+						}
+
 					}
 
 				default:

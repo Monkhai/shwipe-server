@@ -15,6 +15,7 @@ const (
 	UPDATE_USER_LIST_MESSAGE_TYPE       = "update_user_list"
 	SESSION_CLOSED_MESSAGE_TYPE         = "session_closed"
 	REMOVED_FROM_SESSION_MESSAGE_TYPE   = "removed_from_session"
+	MATCH_FOUND_MESSAGE_TYPE            = "match_found"
 )
 
 type SAFE_SessionUser struct {
@@ -152,4 +153,16 @@ type ConnectionEstablishedMessage struct {
 
 func NewConnectionEstablishedMessage() ConnectionEstablishedMessage {
 	return ConnectionEstablishedMessage{BaseServerMessage: BaseServerMessage{Type: CONNECTION_ESTABLISHED_MESSAGE_TYPE}}
+}
+
+type MatchFoundMessage struct {
+	BaseServerMessage
+	RestaurantIndex int `json:"restaurant_index"`
+}
+
+func NewMatchFoundMessage(restaurantIndex int) MatchFoundMessage {
+	return MatchFoundMessage{
+		BaseServerMessage: BaseServerMessage{Type: MATCH_FOUND_MESSAGE_TYPE},
+		RestaurantIndex:   restaurantIndex,
+	}
 }

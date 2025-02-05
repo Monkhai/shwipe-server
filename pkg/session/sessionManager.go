@@ -139,11 +139,11 @@ func (sm *SessionManager) RemoveSession(sessionID string) error {
 	session.CloseOnce.Do(func() {
 		close(session.RemoveSessionChan)
 		close(session.msgChan)
-		session.UsersMap.CloseAllDoneChans()
+		session.SessionUserManager.CloseAllDoneChans()
 	})
 
 	msg := servermessages.NewSessionClosedMessage()
-	usrs, err := session.UsersMap.GetAllUsers()
+	usrs, err := session.SessionUserManager.GetAllUsers()
 	if err != nil {
 		return err
 	}
@@ -168,7 +168,7 @@ func (sm *SessionManager) RemoveUserFromAllSessions(usr *user.User) error {
 		if session.IsUserInSession(usr.IDToken) {
 			session.RemoveUser(usr)
 			log.Println("User removed from session (from RemoveUserFromAllSessions)")
-			if session.UsersMap.GetUserCount() == 0 {
+			if session.SessionUserManager.GetUserCount() == 0 {
 				sm.RemoveSession(session.ID)
 				log.Println("Session removed (from RemoveUserFromAllSessions)")
 			}

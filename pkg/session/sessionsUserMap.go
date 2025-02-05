@@ -8,7 +8,7 @@ import (
 	"github.com/Monkhai/shwipe-server.git/pkg/user"
 )
 
-type SessionUsersMap struct {
+type SessionUserManager struct {
 	sessionID string
 	IndexMap  map[string]int
 	UsersMap  map[string]*user.User
@@ -16,8 +16,8 @@ type SessionUsersMap struct {
 	mux       sync.RWMutex
 }
 
-func NewSessionUsersMap(sessionID string) *SessionUsersMap {
-	userIndexMap := SessionUsersMap{
+func NewSessionUsersMap(sessionID string) *SessionUserManager {
+	userIndexMap := SessionUserManager{
 		sessionID: sessionID,
 		UsersMap:  make(map[string]*user.User),
 		IndexMap:  make(map[string]int),
@@ -30,7 +30,7 @@ func NewSessionUsersMap(sessionID string) *SessionUsersMap {
 	return &userIndexMap
 }
 
-func (sum *SessionUsersMap) AddUser(usr *user.User) error {
+func (sum *SessionUserManager) AddUser(usr *user.User) error {
 	if sum.IsUserInMap(usr.IDToken) {
 		return errors.New("user already in map")
 	}
@@ -44,7 +44,7 @@ func (sum *SessionUsersMap) AddUser(usr *user.User) error {
 	return nil
 }
 
-func (sum *SessionUsersMap) RemoveUser(userID string) error {
+func (sum *SessionUserManager) RemoveUser(userID string) error {
 	if !sum.IsUserInMap(userID) {
 		return errors.New("user not found")
 	}
@@ -55,14 +55,14 @@ func (sum *SessionUsersMap) RemoveUser(userID string) error {
 	return nil
 }
 
-func (sum *SessionUsersMap) GetUser(userID string) (*user.User, bool) {
+func (sum *SessionUserManager) GetUser(userID string) (*user.User, bool) {
 	sum.mux.RLock()
 	defer sum.mux.RUnlock()
 	usr, ok := sum.UsersMap[userID]
 	return usr, ok
 }
 
-func (sum *SessionUsersMap) GetAllUsers() ([]*user.User, error) {
+func (sum *SessionUserManager) GetAllUsers() ([]*user.User, error) {
 	sum.mux.RLock()
 	defer sum.mux.RUnlock()
 	users := make([]*user.User, 0, len(sum.UsersMap))
@@ -72,7 +72,7 @@ func (sum *SessionUsersMap) GetAllUsers() ([]*user.User, error) {
 	return users, nil
 }
 
-func (sum *SessionUsersMap) IsUserInMap(userID string) bool {
+func (sum *SessionUserManager) IsUserInMap(userID string) bool {
 	sum.mux.RLock()
 	defer sum.mux.RUnlock()
 	_, inIndexMap := sum.IndexMap[userID]
@@ -83,7 +83,7 @@ func (sum *SessionUsersMap) IsUserInMap(userID string) bool {
 	return true
 }
 
-func (sum *SessionUsersMap) GetIndex(userID string) (int, error) {
+func (sum *SessionUserManager) GetIndex(userID string) (int, error) {
 	if !sum.IsUserInMap(userID) {
 		return 0, errors.New("user not found")
 	}
@@ -92,7 +92,7 @@ func (sum *SessionUsersMap) GetIndex(userID string) (int, error) {
 	return sum.IndexMap[userID], nil
 }
 
-func (sum *SessionUsersMap) SetIndex(userID string, index int) error {
+func (sum *SessionUserManager) SetIndex(userID string, index int) error {
 	if !sum.IsUserInMap(userID) {
 		return errors.New("user not found")
 	}
@@ -102,13 +102,13 @@ func (sum *SessionUsersMap) SetIndex(userID string, index int) error {
 	return nil
 }
 
-func (sum *SessionUsersMap) GetUserCount() int {
+func (sum *SessionUserManager) GetUserCount() int {
 	sum.mux.RLock()
 	defer sum.mux.RUnlock()
 	return len(sum.UsersMap)
 }
 
-func (sum *SessionUsersMap) SetDoneChan(userID string, doneChan chan struct{}) {
+func (sum *SessionUserManager) SetDoneChan(userID string, doneChan chan struct{}) {
 	log.Println("Setting done chan for user")
 	sum.mux.Lock()
 	defer sum.mux.Unlock()
@@ -116,14 +116,14 @@ func (sum *SessionUsersMap) SetDoneChan(userID string, doneChan chan struct{}) {
 	log.Println("Set done chan for user")
 }
 
-func (sum *SessionUsersMap) GetDoneChan(userID string) (chan struct{}, bool) {
+func (sum *SessionUserManager) GetDoneChan(userID string) (chan struct{}, bool) {
 	sum.mux.RLock()
 	defer sum.mux.RUnlock()
 	doneChan, ok := sum.doneChans[userID]
 	return doneChan, ok
 }
 
-func (sum *SessionUsersMap) CloseDoneChan(userID string) {
+func (sum *SessionUserManager) CloseDoneChan(userID string) {
 	sum.mux.Lock()
 	defer sum.mux.Unlock()
 	doneChan, ok := sum.doneChans[userID]
@@ -133,11 +133,19 @@ func (sum *SessionUsersMap) CloseDoneChan(userID string) {
 	}
 }
 
-func (sum *SessionUsersMap) CloseAllDoneChans() {
+func (sum *SessionUserManager) CloseAllDoneChans() {
 	sum.mux.Lock()
 	defer sum.mux.Unlock()
 	for _, doneChan := range sum.doneChans {
 		close(doneChan)
 	}
 	sum.doneChans = make(map[string]chan struct{})
+}
+
+func (sum *SessionUserManager) Broadcast(msg interface{}) {
+	sum.mux.RLock()
+	defer sum.mux.RUnlock()
+	for _, user := range sum.UsersMap {
+		user.WriteMessage(msg)
+	}
 }

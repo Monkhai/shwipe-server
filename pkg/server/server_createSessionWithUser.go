@@ -18,7 +18,7 @@ func (s *Server) createSessionWithUser(usr *user.User, userIds []string) error {
 	}
 	log.Println("Session created")
 
-	usrs, err := session.UsersMap.GetAllUsers()
+	usrs, err := session.SessionUserManager.GetAllUsers()
 	if err != nil {
 		log.Printf("Error getting users: %v", err)
 		return err
