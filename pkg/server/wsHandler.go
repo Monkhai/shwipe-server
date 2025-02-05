@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/Monkhai/shwipe-server.git/pkg/db"
 	"github.com/Monkhai/shwipe-server.git/pkg/protocol"
 	servermessages "github.com/Monkhai/shwipe-server.git/pkg/protocol/serverMessages"
 	"github.com/Monkhai/shwipe-server.git/pkg/user"
@@ -54,14 +55,22 @@ func (s *Server) WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	conn.WriteMessage(websocket.TextMessage, msgBytes)
 
-	dbUser, err := s.DB.GetUser(userID)
-	if err != nil {
-		log.Printf("Error getting user: %v", err)
-		conn.WriteMessage(websocket.CloseMessage, []byte(""))
-		conn.Close()
-		return
+	var dbUser *db.DBUser
+
+	if cachedUser, exists := s.UserCache.Get(userID); exists {
+		dbUser = cachedUser
+		log.Println("Got user from cache")
+	} else {
+		dbUser, err = s.DB.GetUser(userID)
+		if err != nil {
+			log.Printf("Error getting user: %v", err)
+			conn.WriteMessage(websocket.CloseMessage, []byte(""))
+			conn.Close()
+			return
+		}
+		s.UserCache.Add(userID, dbUser)
+		log.Println("Got user from db")
 	}
-	log.Println("Got user from db")
 
 	usr := user.NewUser(dbUser, idToken, conn, s.ctx, location, s.app.AuthenticateUser)
 	s.UserManager.AddUser(usr)

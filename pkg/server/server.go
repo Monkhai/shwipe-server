@@ -18,6 +18,7 @@ type Server struct {
 	wg             *sync.WaitGroup
 	SessionManager *session.SessionManager
 	UserManager    *user.UserManager
+	UserCache      *user.UserCache
 	app            *app.App
 	DB             *db.DB
 }
@@ -31,6 +32,7 @@ func NewServer(ctx context.Context, wg *sync.WaitGroup) (*Server, error) {
 	if err != nil {
 		return &Server{}, err
 	}
+	userCache := user.NewUserCache(10 * time.Minute)
 
 	sessionStorage := session.NewSessionMangerDbOps(db)
 
@@ -42,6 +44,7 @@ func NewServer(ctx context.Context, wg *sync.WaitGroup) (*Server, error) {
 		UserManager:    user.NewUserManager(),
 		app:            a,
 		DB:             db,
+		UserCache:      userCache,
 	}, nil
 }
 
