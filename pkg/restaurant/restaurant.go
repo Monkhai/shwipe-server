@@ -10,7 +10,8 @@ type Restaurant struct {
 }
 
 func GetRestaurantPhotoURL(photoReference string) string {
-	return fmt.Sprintf("https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=%s&key=AIzaSyC9YQ5-_68888888888888888888888888888888", photoReference)
+	const API_KEY = "AIzaSyALFutkrFeGGS8jR_HVgO1xUqrlJ-_ZZm4"
+	return fmt.Sprintf("https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=%s&key=%s", photoReference, API_KEY)
 }
 
 type GetRestaurantResponse struct {

@@ -82,12 +82,10 @@ func (r *RestaurantAPI) GetResaturants(lat, lng string, nextPageTokenPtr *string
 	var restaurants []Restaurant
 	for _, rest := range responseObj.Results {
 		photos := []string{}
-
 		for _, photo := range rest.Photos {
-			photoUrl := fmt.Sprintf("https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=%s", photo.PhotoReference)
+			photoUrl := GetRestaurantPhotoURL(photo.PhotoReference)
 			photos = append(photos, photoUrl)
 		}
-
 		restaurants = append(restaurants, Restaurant{
 			Name:       rest.Name,
 			Rating:     rest.Rating,
