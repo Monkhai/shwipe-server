@@ -88,69 +88,32 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 				}
 
 				switch baseMsg.Type {
+				// Session messages
 				case clientmessages.UPDATE_INDEX_MESSAGE_TYPE:
-					{
-						var indexUpdateMessage clientmessages.IndexUpdateMessage
-						if err := json.Unmarshal(msg, &indexUpdateMessage); err != nil {
-							log.Printf("Error unmarshalling index update message: %v", err)
-							continue
-						}
-						u.SessionMsgChan <- indexUpdateMessage
-					}
-				case clientmessages.CREATE_SESSION_MESSAGE_TYPE:
-					{
-						var createSessionMessage clientmessages.CreateSessionMessage
-						if err := json.Unmarshal(msg, &createSessionMessage); err != nil {
-							log.Printf("Error unmarshalling create session message: %v", err)
-							continue
-						}
-						u.ServerMsgChan <- createSessionMessage
-					}
-				case clientmessages.CREATE_SESSION_WITH_FRIENDS_MESSAGE_TYPE:
-					{
-						var createSessionWithFriendsMessage clientmessages.CreateSessionWithFriendsMessage
-						if err := json.Unmarshal(msg, &createSessionWithFriendsMessage); err != nil {
-							log.Printf("Error unmarshalling create session with friends message: %v", err)
-							continue
-						}
-						u.ServerMsgChan <- createSessionWithFriendsMessage
-					}
-				case clientmessages.START_SESSION_MESSAGE_TYPE:
-					{
-						var startSessionMessage clientmessages.StartSessionMessage
-						if err := json.Unmarshal(msg, &startSessionMessage); err != nil {
-							log.Printf("Error unmarshalling create session message: %v", err)
-							continue
-						}
-						u.ServerMsgChan <- startSessionMessage
-					}
+					clientmessages.ProcessMessage[clientmessages.IndexUpdateMessage](msg, u.SessionMsgChan)
+
 				case clientmessages.UPDATE_LOCATION_MESSAGE_TYPE:
-					{
-						var updateLocationMessage clientmessages.UpdateLocationMessage
-						if err := json.Unmarshal(msg, &updateLocationMessage); err != nil {
-							log.Printf("Error unmarshalling update location message: %v", err)
-							continue
-						}
-						u.SessionMsgChan <- updateLocationMessage
-					}
+					clientmessages.ProcessMessage[clientmessages.UpdateLocationMessage](msg, u.SessionMsgChan)
+
+				// Server messages
+				case clientmessages.CREATE_SESSION_MESSAGE_TYPE:
+					clientmessages.ProcessMessage[clientmessages.CreateSessionMessage](msg, u.ServerMsgChan)
+
+				case clientmessages.CREATE_SESSION_WITH_FRIENDS_MESSAGE_TYPE:
+					clientmessages.ProcessMessage[clientmessages.CreateSessionWithFriendsMessage](msg, u.ServerMsgChan)
+
+				case clientmessages.CREATE_SESSION_WITH_GROUP_MESSAGE_TYPE:
+					clientmessages.ProcessMessage[clientmessages.CreateSessionWithGroupMessage](msg, u.ServerMsgChan)
+
+				case clientmessages.START_SESSION_MESSAGE_TYPE:
+					clientmessages.ProcessMessage[clientmessages.StartSessionMessage](msg, u.ServerMsgChan)
+
 				case clientmessages.JOIN_SESSION_MESSAGE_TYPE:
-					{
-						var joinSessionMessage clientmessages.JoinSessionMessage
-						if err := json.Unmarshal(msg, &joinSessionMessage); err != nil {
-							log.Printf("Error unmarshalling join session message: %v", err)
-							continue
-						}
-						u.ServerMsgChan <- joinSessionMessage
-					}
+					clientmessages.ProcessMessage[clientmessages.JoinSessionMessage](msg, u.ServerMsgChan)
+
 				case clientmessages.LEAVE_SESSION_MESSAGE_TYPE:
-					{
-						var leaveSessionMessage clientmessages.LeaveSessionMessage
-						if err := json.Unmarshal(msg, &leaveSessionMessage); err != nil {
-							log.Printf("Error unmarshalling leave session message: %v", err)
-							continue
-						}
-						u.ServerMsgChan <- leaveSessionMessage
-					}
+					clientmessages.ProcessMessage[clientmessages.LeaveSessionMessage](msg, u.ServerMsgChan)
+
 				}
 			}
 		case err := <-errorChan:
