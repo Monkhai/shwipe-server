@@ -6,12 +6,14 @@ var DB_Tables = struct {
 	SessionsTable      SessionsTable
 	SessionUsersTable  SessionUsersTable
 	FriendshipsTable   FriendshipsTable
+	GroupMembersTable  GroupMembersTable
 }{
 	UsersTable:         UsersTableVar,
 	PublicUserIdsTable: PublicUserIdsTableVar,
 	SessionsTable:      SessionsTableVar,
 	SessionUsersTable:  SessionUsersTableVar,
 	FriendshipsTable:   FriendshipsTableVar,
+	GroupMembersTable:  GroupMembersTableVar,
 }
 
 //===============================================================
@@ -87,4 +89,34 @@ var FriendshipsTableVar = FriendshipsTable{
 	TableName: "friendships",
 	UserID1:   "user_id_1",
 	UserID2:   "user_id_2",
+}
+
+// ===============================================================
+
+type GroupsTable struct {
+	TableName string
+	ID        string
+	Name      string
+}
+
+var GroupsTableVar = GroupsTable{
+	TableName: "groups",
+	ID:        "id",
+	Name:      "name",
+}
+
+// ===============================================================
+
+type GroupMembersTable struct {
+	TableName string
+	ID        string
+	GroupID   string
+	UserID    string
+}
+
+var GroupMembersTableVar = GroupMembersTable{
+	TableName: "group_members",
+	ID:        "id",
+	GroupID:   "group_id",
+	UserID:    "user_id",
 }

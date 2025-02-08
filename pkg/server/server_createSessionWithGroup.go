@@ -9,13 +9,14 @@ import (
 	"github.com/Monkhai/shwipe-server.git/pkg/user"
 )
 
-func (s *Server) createSessionWithUser(usr *user.User, userIds []string) {
+func (s *Server) createSessionWithGroup(usr *user.User, groupId string) {
 	sessionDbOps := session.NewSessionDbOps(s.DB)
 	session, err := s.SessionManager.CreateSession(usr, s.wg, sessionDbOps)
 	if err != nil {
 		log.Printf("Error creating session: %v", err)
 		return
 	}
+	log.Println("Session created")
 
 	usrs, err := session.SessionUserManager.GetAllUsers()
 	if err != nil {
@@ -33,7 +34,7 @@ func (s *Server) createSessionWithUser(usr *user.User, userIds []string) {
 	msg := servermessages.NewSessionCreatedMessage(session.ID, safeUsers)
 	usr.WriteMessage(msg)
 
-	pushTokens, err := s.DB.GetUsersPushTokenFromPublicIds(userIds)
+	pushTokens, err := s.DB.GetGroupMembersPushTokens(groupId)
 	if err != nil {
 		log.Printf("Error getting users push tokens: %v", err)
 		return
@@ -42,5 +43,4 @@ func (s *Server) createSessionWithUser(usr *user.User, userIds []string) {
 	for _, pushToken := range pushTokens {
 		s.sendNotification(pushToken, session.ID, notifications.NotificationTypeSessionInvitation)
 	}
-
 }

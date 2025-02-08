@@ -82,11 +82,11 @@ func (s *Server) listenToUserMessages(usr *user.User, wg *sync.WaitGroup) {
 					}
 				case clientmessages.CreateSessionWithFriendsMessage:
 					{
-						err := s.createSessionWithUser(usr, m.FriendIds)
-						if err != nil {
-							log.Printf("Error creating session with friends: %v", err)
-							continue
-						}
+						s.createSessionWithUser(usr, m.FriendIds)
+					}
+				case clientmessages.CreateSessionWithGroupMessage:
+					{
+						s.createSessionWithGroup(usr, m.GroupId)
 					}
 				case clientmessages.StartSessionMessage:
 					{
