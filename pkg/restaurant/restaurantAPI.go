@@ -86,11 +86,13 @@ func (r *RestaurantAPI) GetResaturants(lat, lng string, nextPageTokenPtr *string
 			photoUrl := GetRestaurantPhotoURL(photo.PhotoReference)
 			photos = append(photos, photoUrl)
 		}
+		locationUrl := GetRestaurantLocationURL(rest)
 		restaurants = append(restaurants, Restaurant{
-			Name:       rest.Name,
-			Rating:     rest.Rating,
-			PriceLevel: rest.PriceLevel,
-			Photos:     photos,
+			Name:            rest.Name,
+			Rating:          rest.Rating,
+			PriceLevel:      rest.PriceLevel,
+			Photos:          photos,
+			NavigationLinks: locationUrl,
 		})
 	}
 
