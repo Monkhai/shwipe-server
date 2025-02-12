@@ -1,2 +1,2 @@
-- implement groups
 - implement location updates
+- waze link does not work properly
