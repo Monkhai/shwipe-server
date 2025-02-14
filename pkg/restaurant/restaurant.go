@@ -6,6 +6,7 @@ import (
 )
 
 type Restaurant struct {
+	PlaceID         string          `json:"place_id"`
 	Name            string          `json:"name"`
 	Rating          float64         `json:"rating"`
 	PriceLevel      int             `json:"price_level"`

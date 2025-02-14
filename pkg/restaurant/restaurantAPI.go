@@ -88,6 +88,7 @@ func (r *RestaurantAPI) GetResaturants(lat, lng string, nextPageTokenPtr *string
 		}
 		locationUrl := GetRestaurantLocationURL(rest)
 		restaurants = append(restaurants, Restaurant{
+			PlaceID:         rest.PlaceID,
 			Name:            rest.Name,
 			Rating:          rest.Rating,
 			PriceLevel:      rest.PriceLevel,
