@@ -14,7 +14,8 @@ type Restaurant struct {
 	NavigationLinks NavigationLinks `json:"navigation_links"`
 }
 
-const API_KEY = "AIzaSyALFutkrFeGGS8jR_HVgO1xUqrlJ-_ZZm4"
+// This api key is safe to be shared since it is restricted to a specific ip
+const API_KEY = "AIzaSyCcX-ScfVRz1BkumUOgOl45VK6gc5QAlkk"
 
 func GetRestaurantPhotoURL(photoReference string) string {
 	return fmt.Sprintf("https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=%s&key=%s", photoReference, API_KEY)
