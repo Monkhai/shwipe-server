@@ -1,2 +1,3 @@
 - implement location updates
 - waze link does not work properly
+- implement db session sync to allow horizontal scaling
