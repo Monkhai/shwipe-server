@@ -18,13 +18,13 @@ const (
 	LEAVE_SESSION_MESSAGE_TYPE               = "leave_session"
 )
 
-func ProcessMessage[T any](msg []byte, channel chan interface{}) {
+func ProcessMessage[T any](msg []byte) (T, error) {
 	var t T
 	if err := json.Unmarshal(msg, &t); err != nil {
 		log.Printf("Error unmarshalling message: %v", err)
-		return
+		return t, err
 	}
-	channel <- t
+	return t, nil
 }
 
 type BaseClientMessage struct {

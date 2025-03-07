@@ -89,32 +89,71 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 				}
 
 				switch baseMsg.Type {
-				// Session messages
+				// SESSION MESSAGES
 				case clientmessages.UPDATE_INDEX_MESSAGE_TYPE:
-					clientmessages.ProcessMessage[clientmessages.IndexUpdateMessage](msg, u.SessionMsgChan)
-
+					processedMessage, err := clientmessages.ProcessMessage[clientmessages.IndexUpdateMessage](msg)
+					if err != nil {
+						log.Printf("Error processing message of type %s. %q", processedMessage.Type, err)
+					}
+					u.SessionMsgChan <- processedMessage
+				//--------------------------------
+				//--------------------------------
 				case clientmessages.UPDATE_LOCATION_MESSAGE_TYPE:
-					clientmessages.ProcessMessage[clientmessages.UpdateLocationMessage](msg, u.SessionMsgChan)
+					proecssedMessage, err := clientmessages.ProcessMessage[clientmessages.UpdateLocationMessage](msg)
+					if err != nil {
+						log.Printf("Error processing message of type %s. %q", proecssedMessage.Type, err)
+					}
+					u.SessionMsgChan <- proecssedMessage
+				//--------------------------------
+				//--------------------------------
 
-				// Server messages
+				// SERVER MESSAGES
 				case clientmessages.CREATE_SESSION_MESSAGE_TYPE:
-					clientmessages.ProcessMessage[clientmessages.CreateSessionMessage](msg, u.ServerMsgChan)
-
+					proecssedMessage, err := clientmessages.ProcessMessage[clientmessages.CreateSessionMessage](msg)
+					if err != nil {
+						log.Printf("Error processing message of type %s. %q", proecssedMessage.Type, err)
+					}
+					u.ServerMsgChan <- proecssedMessage
+				//--------------------------------
+				//--------------------------------
 				case clientmessages.CREATE_SESSION_WITH_FRIENDS_MESSAGE_TYPE:
-					clientmessages.ProcessMessage[clientmessages.CreateSessionWithFriendsMessage](msg, u.ServerMsgChan)
-
+					processedMessage, err := clientmessages.ProcessMessage[clientmessages.CreateSessionWithFriendsMessage](msg)
+					if err != nil {
+						log.Printf("Error processing message of type %s. %q", processedMessage.Type, err)
+					}
+					u.ServerMsgChan <- processedMessage
+				//--------------------------------
+				//--------------------------------
 				case clientmessages.CREATE_SESSION_WITH_GROUP_MESSAGE_TYPE:
-					clientmessages.ProcessMessage[clientmessages.CreateSessionWithGroupMessage](msg, u.ServerMsgChan)
-
+					processedmessage, err := clientmessages.ProcessMessage[clientmessages.CreateSessionWithGroupMessage](msg)
+					if err != nil {
+						log.Printf("Error processing message of type %s. %q", processedmessage.Type, err)
+					}
+					u.ServerMsgChan <- processedmessage
+				//--------------------------------
+				//--------------------------------
 				case clientmessages.START_SESSION_MESSAGE_TYPE:
-					clientmessages.ProcessMessage[clientmessages.StartSessionMessage](msg, u.ServerMsgChan)
-
+					processedMessage, err := clientmessages.ProcessMessage[clientmessages.StartSessionMessage](msg)
+					if err != nil {
+						log.Printf("Error processing message of type %s. %q", processedMessage.Type, err)
+					}
+					u.ServerMsgChan <- processedMessage
+				//--------------------------------
+				//--------------------------------
 				case clientmessages.JOIN_SESSION_MESSAGE_TYPE:
-					clientmessages.ProcessMessage[clientmessages.JoinSessionMessage](msg, u.ServerMsgChan)
-
+					processedMessage, err := clientmessages.ProcessMessage[clientmessages.JoinSessionMessage](msg)
+					if err != nil {
+						log.Printf("Error processing message of type %s. %q", processedMessage.Type, err)
+					}
+					u.ServerMsgChan <- processedMessage
+				//--------------------------------
+				//--------------------------------
 				case clientmessages.LEAVE_SESSION_MESSAGE_TYPE:
-					clientmessages.ProcessMessage[clientmessages.LeaveSessionMessage](msg, u.ServerMsgChan)
-
+					processedMessage, err := clientmessages.ProcessMessage[clientmessages.LeaveSessionMessage](msg)
+					if err != nil {
+						log.Printf("Error processing message of type %s. %q", processedMessage.Type, err)
+					}
+					u.ServerMsgChan <- processedMessage
 				}
 			}
 		case err := <-errorChan:
@@ -139,7 +178,7 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 	}
 }
 
-func (u *User) WriteMessage(msg interface{}) {
+func (u *User) WriteMessage(msg any) {
 	jsonMsg, err := json.Marshal(msg)
 	if err != nil {
 		log.Printf("Error marshalling message: %v", err)
