@@ -58,6 +58,8 @@ func main() {
 	}
 
 	http.HandleFunc("/ws", s.WebSocketHandler)
+
+	// TODO: remove this from production
 	go func() {
 		// print the internal ip address
 		addrs, err := net.InterfaceAddrs()
@@ -95,7 +97,7 @@ func main() {
 	select {
 	case <-waitChan:
 		log.Println("WaitGroup completed normally")
-	case <-time.After(10 * time.Second):
+	case <-time.After(30 * time.Second):
 		log.Println("WARNING: WaitGroup wait timed out!")
 		printUserGoroutines()
 	}
