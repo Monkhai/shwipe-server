@@ -6,6 +6,7 @@ import (
 	"log"
 	"sync"
 
+	"github.com/Monkhai/shwipe-server.git/pkg/app"
 	"github.com/Monkhai/shwipe-server.git/pkg/db"
 	"github.com/Monkhai/shwipe-server.git/pkg/protocol"
 	clientmessages "github.com/Monkhai/shwipe-server.git/pkg/protocol/clientMessages"
@@ -13,29 +14,29 @@ import (
 )
 
 type User struct {
-	IDToken             string
-	DBUser              *db.DBUser
-	Conn                *websocket.Conn
-	Ctx                 context.Context
-	cancelCtx           context.CancelFunc
-	ServerMsgChan       chan interface{}
-	SessionMsgChan      chan interface{}
-	Location            protocol.Location
-	AuthenticateMessage func(token string) (string, error)
+	IDToken        string
+	DBUser         *db.DBUser
+	Conn           *websocket.Conn
+	Ctx            context.Context
+	cancelCtx      context.CancelFunc
+	ServerMsgChan  chan any
+	SessionMsgChan chan any
+	Location       protocol.Location
+	authenticator  app.Authenticator
 }
 
-func NewUser(dbUser *db.DBUser, idToken string, conn *websocket.Conn, ctx context.Context, location protocol.Location, authenticateMessage func(token string) (string, error)) *User {
+func NewUser(dbUser *db.DBUser, idToken string, conn *websocket.Conn, ctx context.Context, location protocol.Location, authenticator app.Authenticator) *User {
 	ctx, cancel := context.WithCancel(ctx)
 	return &User{
-		IDToken:             idToken,
-		DBUser:              dbUser,
-		Conn:                conn,
-		Ctx:                 ctx,
-		cancelCtx:           cancel,
-		Location:            location,
-		ServerMsgChan:       make(chan interface{}),
-		SessionMsgChan:      make(chan interface{}),
-		AuthenticateMessage: authenticateMessage,
+		IDToken:        idToken,
+		DBUser:         dbUser,
+		Conn:           conn,
+		Ctx:            ctx,
+		cancelCtx:      cancel,
+		Location:       location,
+		ServerMsgChan:  make(chan any),
+		SessionMsgChan: make(chan any),
+		authenticator:  authenticator,
 	}
 }
 
@@ -77,7 +78,7 @@ func (u *User) Listen(wg *sync.WaitGroup) {
 				}
 
 				log.Printf("user received message: %v", baseMsg.Type)
-				userID, err := u.AuthenticateMessage(u.IDToken)
+				userID, err := u.authenticator.VerifyIDToken(u.IDToken)
 				if err != nil {
 					log.Printf("Error authenticating user: %v", err)
 					continue

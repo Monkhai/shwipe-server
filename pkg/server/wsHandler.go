@@ -37,7 +37,7 @@ func (s *Server) WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, err := s.app.AuthenticateUser(idToken)
+	userID, err := s.app.Authenticate(idToken)
 	if err != nil {
 		log.Printf("Error authenticating user: %v", err)
 		conn.WriteMessage(websocket.CloseMessage, []byte(""))
@@ -52,7 +52,7 @@ func (s *Server) WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	usr := user.NewUser(dbUser, idToken, conn, s.ctx, location, s.app.AuthenticateUser)
+	usr := user.NewUser(dbUser, idToken, conn, s.ctx, location, s.app)
 	s.UserManager.AddUser(usr)
 
 	connectionEstablised := servermessages.NewConnectionEstablishedMessage()
@@ -88,6 +88,7 @@ func processParameters(r *http.Request, conn *websocket.Conn) (string, protocol.
 		conn.Close()
 		return "", protocol.Location{}, errors.New("lat and lng are required. User not authenticated and not allowed to connect")
 	}
+
 	location := protocol.Location{Lat: lat, Lng: lng}
 	return idToken, location, nil
 }

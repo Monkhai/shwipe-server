@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	firestore "cloud.google.com/go/firestore"
@@ -9,6 +10,10 @@ import (
 	auth "firebase.google.com/go/auth"
 	"google.golang.org/api/option"
 )
+
+type Authenticator interface {
+	VerifyIDToken(token string) (string, error)
+}
 
 type App struct {
 	firebase *firebase.App
@@ -41,4 +46,22 @@ func NewApp(ctx context.Context) (*App, error) {
 		store:    store,
 		ctx:      ctx,
 	}, nil
+}
+
+func (app *App) Authenticate(token string) (string, error) {
+	user, err := app.auth.VerifyIDToken(app.ctx, token)
+	if err != nil {
+		return "", errors.New("failed to verify id token")
+	}
+
+	return user.UID, nil
+}
+
+func (app *App) VerifyIDToken(token string) (string, error) {
+	user, err := app.auth.VerifyIDToken(app.ctx, token)
+	if err != nil {
+		return "", errors.New("failed to verify id token")
+	}
+
+	return user.UID, nil
 }

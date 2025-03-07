@@ -12,7 +12,7 @@ func (s *Server) GetSessions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := s.app.AuthenticateUser(tokenID)
+	_, err := s.app.Authenticate(tokenID)
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
