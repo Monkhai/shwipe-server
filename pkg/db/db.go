@@ -59,7 +59,7 @@ func (db *DB) Close() {
 	log.Println("DB closed")
 }
 
-func (db *DB) CreateQuery(queryFile, templateName string, data interface{}) (string, error) {
+func (db *DB) CreateQuery(queryFile, templateName string, data any) (string, error) {
 	sqlBytes, err := SqlFiles.ReadFile(queryFile)
 	if err != nil {
 		return "", err
@@ -79,11 +79,11 @@ func (db *DB) CreateQuery(queryFile, templateName string, data interface{}) (str
 	return queryBuf.String(), nil
 }
 
-func (db *DB) RunQuery(sql string, args ...interface{}) (pgx.Rows, error) {
+func (db *DB) RunQuery(sql string, args ...any) (pgx.Rows, error) {
 	return db.pool.Query(db.ctx, sql, args...)
 }
 
-func (db *DB) ExecuteQuery(sql string, args ...interface{}) error {
+func (db *DB) ExecuteQuery(sql string, args ...any) error {
 	_, err := db.pool.Exec(db.ctx, sql, args...)
 	return err
 }

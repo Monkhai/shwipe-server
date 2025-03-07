@@ -58,9 +58,6 @@ func main() {
 	}
 
 	http.HandleFunc("/ws", s.WebSocketHandler)
-	http.HandleFunc("/get-sessions", s.GetSessions)
-	http.HandleFunc("/get-user", s.GetUser)
-	http.HandleFunc("/get-users", s.GetUsers)
 	go func() {
 		// print the internal ip address
 		addrs, err := net.InterfaceAddrs()
