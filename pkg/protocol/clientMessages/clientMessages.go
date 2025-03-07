@@ -2,7 +2,6 @@ package clientmessages
 
 import (
 	"encoding/json"
-	"log"
 
 	"github.com/Monkhai/shwipe-server.git/pkg/protocol"
 )
@@ -21,7 +20,6 @@ const (
 func ProcessMessage[T any](msg []byte) (T, error) {
 	var t T
 	if err := json.Unmarshal(msg, &t); err != nil {
-		log.Printf("Error unmarshalling message: %v", err)
 		return t, err
 	}
 	return t, nil
