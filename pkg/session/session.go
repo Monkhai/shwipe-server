@@ -20,7 +20,7 @@ type Session struct {
 	ctx                context.Context
 	restaurantAPI      *restaurant.RestaurantAPI
 	sessionDbOps       *SessionDbOps
-	msgChan            chan interface{}
+	msgChan            chan any
 	RemoveSessionChan  chan struct{}
 	VoteManager        *user.VoteManager
 	CloseOnce          sync.Once

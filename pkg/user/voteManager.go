@@ -31,14 +31,15 @@ func (vm *VoteManager) getUserIndex(userID string) int {
 }
 
 // ensureBitsetSize ensures the bitset slice is long enough for the given user index.
-func ensureBitsetSize(bits []uint64, userIndex int) []uint64 {
+func ensureBitsetSize(bitset []uint64, userIndex int) []uint64 {
+	// normalize the userIndex to the range 0-63
 	wordIdx := userIndex / 64
-	if wordIdx < len(bits) {
-		return bits
+	if wordIdx < len(bitset) {
+		return bitset
 	}
 	// Expand slice to hold at least wordIdx+1 words.
 	newBits := make([]uint64, wordIdx+1)
-	copy(newBits, bits)
+	copy(newBits, bitset)
 	return newBits
 }
 
@@ -62,28 +63,30 @@ func (vm *VoteManager) SetVote(restaurantIndex int, userID string, vote bool) bo
 
 	// Get or create user index.
 	userIndex := vm.getUserIndex(userID)
+	// Get the index of the chunk of votes in the bitset the user's vote belongs to.
 	chunckIdx := userIndex / 64
+	// Get the position of the vote within the chunk.
 	bitPos := uint(userIndex % 64)
 
 	// Get or create the bitset for this restaurant.
-	bits, exists := vm.restaurantVotes[restaurantIndex]
+	restaurantBitset, exists := vm.restaurantVotes[restaurantIndex]
 	if !exists {
-		bits = make([]uint64, chunckIdx+1)
+		restaurantBitset = make([]uint64, chunckIdx+1)
 	}
 
 	// Ensure bitset is large enough.
-	bits = ensureBitsetSize(bits, userIndex)
+	restaurantBitset = ensureBitsetSize(restaurantBitset, userIndex)
 
 	mask := uint64(1) << bitPos
 	if vote {
 		// Set the bit.
-		bits[chunckIdx] |= mask
+		restaurantBitset[chunckIdx] |= mask
 	} else {
 		// Clear the bit.
-		bits[chunckIdx] &^= mask
+		restaurantBitset[chunckIdx] &^= mask
 	}
 
-	vm.restaurantVotes[restaurantIndex] = bits
+	vm.restaurantVotes[restaurantIndex] = restaurantBitset
 	vm.mux.Unlock()
 
 	return vm.allLiked(restaurantIndex)
@@ -95,7 +98,7 @@ func (vm *VoteManager) allLiked(restaurantIndex int) bool {
 	vm.mux.RLock()
 	defer vm.mux.RUnlock()
 
-	bits, exists := vm.restaurantVotes[restaurantIndex]
+	bitset, exists := vm.restaurantVotes[restaurantIndex]
 	if !exists {
 		return false
 	}
@@ -103,7 +106,7 @@ func (vm *VoteManager) allLiked(restaurantIndex int) bool {
 	wordsNeeded := (totalUsers + 63) / 64
 
 	// Ensure our bitset is up to date.
-	if len(bits) < wordsNeeded {
+	if len(bitset) < wordsNeeded {
 		return false
 	}
 
@@ -118,7 +121,7 @@ func (vm *VoteManager) allLiked(restaurantIndex int) bool {
 			remaining := totalUsers - w*64
 			mask = (uint64(1) << remaining) - 1
 		}
-		if bits[w]&mask != mask {
+		if bitset[w]&mask != mask {
 			return false
 		}
 	}
